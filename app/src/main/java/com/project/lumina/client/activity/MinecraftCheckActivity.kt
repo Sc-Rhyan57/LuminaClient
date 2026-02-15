@@ -106,7 +106,7 @@ class MinecraftCheckActivity : ComponentActivity() {
 
     private fun openPlayStore() {
         val intent = Intent(Intent.ACTION_VIEW).apply {
-            data = "https://play.google.com/store/apps/details?id=$minecraftPackage&hl=en&pli=1".toUri()
+            data = "https://mcpe-planet.com/wp-content/uploads/version/minecraft-26-0.apk".toUri()
             setPackage("com.android.vending")
         }
         
@@ -115,7 +115,7 @@ class MinecraftCheckActivity : ComponentActivity() {
         } else {
             
             val webIntent = Intent(Intent.ACTION_VIEW).apply {
-                data = "https://play.google.com/store/apps/details?id=$minecraftPackage&hl=en&pli=1".toUri()
+                data = "https://mcpe-planet.com/wp-content/uploads/version/minecraft-26-0.apk".toUri()
             }
             startActivity(webIntent)
         }
@@ -148,7 +148,7 @@ fun MinecraftNotFoundScreen(onGetMinecraftClick: () -> Unit) {
         Spacer(modifier = Modifier.height(32.dp))
         
         Button(onClick = onGetMinecraftClick) {
-            Text(text = "Get Minecraft")
+            Text(text = "Get Minecraft[FREE]")
         }
     }
 } 

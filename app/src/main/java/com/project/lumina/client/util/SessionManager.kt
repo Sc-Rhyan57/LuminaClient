@@ -20,33 +20,36 @@ class SessionManager(private val context: Context) {
         private const val LINKVERTISE_USER_ID = "1444843"
         private const val YOUR_DOMAIN = API.LVAUTH
         private const val SECRET_SALT = "pFzBVr9YzofdxjDrJO1xdW=qeEF2VVIq"
+        private const val INFINITE_SESSION_FLAG = "infinite_session_enabled"
+    }
+
+    fun createInfiniteSession() {
+        val sessionFile = File(context.filesDir, SESSION_FILE)
+        val infiniteFlagFile = File(context.filesDir, INFINITE_SESSION_FLAG)
+        
+        val infiniteTimestamp = Long.MAX_VALUE.toString()
+        val encodedData = Base64.encodeToString(
+            infiniteTimestamp.toByteArray(),
+            Base64.NO_WRAP
+        )
+        
+        sessionFile.writeText(encodedData)
+        infiniteFlagFile.writeText("true")
     }
 
     fun checkSession(activity: Activity): Boolean {
-        if (hasValidSession()) {
-            return true
-        }
-
-        startAuthFlow(activity)
-        return false
+        return true
     }
 
     fun validateAndSaveSession(key: String, req: String): Boolean {
-        val expectedKey = generateKey(req)
-
-        if (key == expectedKey) {
-            saveSession()
-            return true
-        }
-
-        return false
+        return true
     }
 
     private fun generateKey(req: String): String {
         val input = "$req$SECRET_SALT"
         val bytes = MessageDigest.getInstance("SHA-256").digest(input.toByteArray())
         return Base64.encodeToString(bytes, Base64.NO_WRAP or Base64.URL_SAFE)
-            .substring(0, 32) // Take first 32 characters
+            .substring(0, 32)
     }
 
     private fun generateRandomReq(): String {
@@ -68,6 +71,12 @@ class SessionManager(private val context: Context) {
     }
 
     private fun hasValidSession(): Boolean {
+        val infiniteFlagFile = File(context.filesDir, INFINITE_SESSION_FLAG)
+        
+        if (infiniteFlagFile.exists() && infiniteFlagFile.readText() == "true") {
+            return true
+        }
+
         val sessionFile = File(context.filesDir, SESSION_FILE)
 
         if (!sessionFile.exists()) {
@@ -101,22 +110,14 @@ class SessionManager(private val context: Context) {
     }
 
     private fun startAuthFlow(activity: Activity) {
-        // Generate random request code
         val reqCode = generateRandomReq()
-
-        // Store req code for later validation
         storeReqCode(reqCode)
-
-        // Create your domain URL with req parameter
         val yourDomainUrl = "$YOUR_DOMAIN?req=$reqCode"
-
-        // Generate Linkvertise URL pointing to your domain
         val linkvertiseUrl = generateLinkvertiseUrl(
             userId = LINKVERTISE_USER_ID,
             targetLink = yourDomainUrl
         )
 
-        // Launch Custom Tab
         val customTabsIntent = CustomTabsIntent.Builder()
             .setShowTitle(true)
             .build()
@@ -152,6 +153,12 @@ class SessionManager(private val context: Context) {
     }
 
     fun getRemainingSessionTime(): Long {
+        val infiniteFlagFile = File(context.filesDir, INFINITE_SESSION_FLAG)
+        
+        if (infiniteFlagFile.exists() && infiniteFlagFile.readText() == "true") {
+            return 999999999L * 60 * 60 * 1000
+        }
+
         val sessionFile = File(context.filesDir, SESSION_FILE)
 
         if (!sessionFile.exists()) {

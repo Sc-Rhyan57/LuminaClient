@@ -79,7 +79,7 @@ class LaunchActivity : ComponentActivity() {
 
         Toast.makeText(
             this,
-            "Session valid for ${hours}h ${minutes}m",
+            "Session valid for ${hours}h ${minutes}m | Lifetime by rhyan57",
             Toast.LENGTH_LONG
         ).show()
     }

@@ -143,7 +143,7 @@ class RPCManager(
             firstButtonUrl = "minecraft://connect/?serverUrl=$serverIp&serverPort=$serverPort"
         } else {
             firstButtonLabel = "Download"
-            firstButtonUrl = "https://projectlumina.online"
+            firstButtonUrl = "https://github.com/Sc-Rhyan57/LuminaClient/releases"
         }
 
         val activityBuilder = Activity.Builder()

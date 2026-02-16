@@ -4,7 +4,7 @@ composeColorfulSliders = "1.2.2"
 exoplayer = "2.19.1"
 kotlin = "2.1.10"
 coreKtx = "1.15.0"
-junit = "4.13.2"  # Note: Two different junit versions exist, keeping both
+junit = "4.13.2"
 junitVersion = "1.1.5"
 espressoCore = "3.5.0"
 kotlinxSerializationJsonJvm = "1.8.0"
@@ -26,7 +26,7 @@ math = "2.0"
 nbt = "3.0.3.Final"
 snappy = "2.0.2"
 checkerframework = "0.6.49"
-junit-extra = "5.12.0-RC1"  # Renamed to avoid conflict with existing junit
+junit-extra = "5.12.0-RC1"
 raknet = "4.1.51.Final"
 guava = "33.4.0-jre"
 gson = "2.12.1"
@@ -44,6 +44,8 @@ window = "1.3.0"
 activity = "1.10.1"
 minecraftauth = "4.1.1"
 adventure = "4.24.0"
+# ✅ ADICIONADO: CloudburstMC Protocol Beta12
+cloudburstmc-protocol = "3.0.0.Beta12-SNAPSHOT"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -109,9 +111,16 @@ androidx-foundation-android = { group = "androidx.compose.foundation", name = "f
 androidx-window = { group = "androidx.window", name = "window", version.ref = "window" }
 androidx-activity = { group = "androidx.activity", name = "activity", version.ref = "activity" }
 
+# ✅ ADICIONADO: CloudburstMC Protocol Beta12 Libraries
+cloudburstmc-protocol-bedrock-codec = { group = "org.cloudburstmc.protocol", name = "bedrock-codec", version.ref = "cloudburstmc-protocol" }
+cloudburstmc-protocol-bedrock-connection = { group = "org.cloudburstmc.protocol", name = "bedrock-connection", version.ref = "cloudburstmc-protocol" }
+cloudburstmc-protocol-common = { group = "org.cloudburstmc.protocol", name = "common", version.ref = "cloudburstmc-protocol" }
+
 [bundles]
 netty = [ "netty-common", "netty-buffer", "netty-codec", "netty-transport" ]
 junit-jupiter = [ "junit-jupiter-engine", "junit-jupiter-api", "junit-jupiter-params" ]
+# ✅ ADICIONADO: Bundle para CloudburstMC Protocol
+cloudburstmc-protocol = [ "cloudburstmc-protocol-bedrock-codec", "cloudburstmc-protocol-bedrock-connection", "cloudburstmc-protocol-common" ]
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

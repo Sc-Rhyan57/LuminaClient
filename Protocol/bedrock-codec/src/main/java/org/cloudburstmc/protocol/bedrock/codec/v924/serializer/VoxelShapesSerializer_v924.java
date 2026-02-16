@@ -3,9 +3,9 @@ package org.cloudburstmc.protocol.bedrock.codec.v924.serializer;
 import io.netty.buffer.ByteBuf;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
+import lombok.Data;
 import org.cloudburstmc.protocol.bedrock.codec.BedrockCodecHelper;
 import org.cloudburstmc.protocol.bedrock.codec.BedrockPacketSerializer;
-import org.cloudburstmc.protocol.bedrock.data.SerializableVoxelShape;
 import org.cloudburstmc.protocol.bedrock.packet.VoxelShapesPacket;
 import org.cloudburstmc.protocol.common.util.VarInts;
 
@@ -18,6 +18,22 @@ import java.util.Map;
 public class VoxelShapesSerializer_v924 implements BedrockPacketSerializer<VoxelShapesPacket> {
 
     public static final VoxelShapesSerializer_v924 INSTANCE = new VoxelShapesSerializer_v924();
+
+    @Data
+    public static class VoxelShape {
+        private final List<VoxelCells> cells;
+        private final List<Float> xCoordinates;
+        private final List<Float> yCoordinates;
+        private final List<Float> zCoordinates;
+    }
+
+    @Data
+    public static class VoxelCells {
+        private final short xSize;
+        private final short ySize;
+        private final short zSize;
+        private final List<Short> storage;
+    }
 
     @Override
     public void serialize(ByteBuf buffer, BedrockCodecHelper helper, VoxelShapesPacket packet) {
@@ -38,16 +54,16 @@ public class VoxelShapesSerializer_v924 implements BedrockPacketSerializer<Voxel
         VarInts.writeUnsignedInt(buffer, packet.getNameMap().size());
         packet.getNameMap().forEach((k, v) -> {
             helper.writeString(buffer, k);
-            buffer.getUnsignedShortLE(v);
+            buffer.writeShortLE(v); 
         });
     }
 
     @Override
     public void deserialize(ByteBuf buffer, BedrockCodecHelper helper, VoxelShapesPacket packet) {
-        List<SerializableVoxelShape> shapes = new ArrayList<>();
+        List<VoxelShape> shapes = new ArrayList<>();
 
         helper.readArray(buffer, shapes, (buf, h) -> {
-            List<SerializableVoxelShape.SerializableCells> cells = new ArrayList<>();
+            List<VoxelCells> cells = new ArrayList<>();
 
             helper.readArray(buf, cells, buf2 -> {
                 short xSize = buf2.readUnsignedByte();
@@ -57,7 +73,7 @@ public class VoxelShapesSerializer_v924 implements BedrockPacketSerializer<Voxel
                 List<Short> storage = new ArrayList<>();
                 helper.readArray(buf2, storage, (ByteBuf::readUnsignedByte));
 
-                return new SerializableVoxelShape.SerializableCells(xSize, ySize, zSize, storage);
+                return new VoxelCells(xSize, ySize, zSize, storage);
             });
 
             List<Float> xCoordinates = new ArrayList<>();
@@ -69,7 +85,7 @@ public class VoxelShapesSerializer_v924 implements BedrockPacketSerializer<Voxel
             List<Float> zCoordinates = new ArrayList<>();
             helper.readArray(buf, zCoordinates, (ByteBuf::readFloatLE));
 
-            return new SerializableVoxelShape(cells, xCoordinates, yCoordinates, zCoordinates);
+            return new VoxelShape(cells, xCoordinates, yCoordinates, zCoordinates);
         });
 
         packet.setShapes(shapes);

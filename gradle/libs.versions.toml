@@ -44,7 +44,7 @@ window = "1.3.0"
 activity = "1.10.1"
 minecraftauth = "4.1.1"
 adventure = "4.24.0"
-# ✅ ADICIONADO: CloudburstMC Protocol Beta12
+# â ADICIONADO: CloudburstMC Protocol Beta12
 cloudburstmc-protocol = "3.0.0.Beta12-SNAPSHOT"
 
 [libraries]
@@ -111,7 +111,7 @@ androidx-foundation-android = { group = "androidx.compose.foundation", name = "f
 androidx-window = { group = "androidx.window", name = "window", version.ref = "window" }
 androidx-activity = { group = "androidx.activity", name = "activity", version.ref = "activity" }
 
-# ✅ ADICIONADO: CloudburstMC Protocol Beta12 Libraries
+# â ADICIONADO: CloudburstMC Protocol Beta12 Libraries
 cloudburstmc-protocol-bedrock-codec = { group = "org.cloudburstmc.protocol", name = "bedrock-codec", version.ref = "cloudburstmc-protocol" }
 cloudburstmc-protocol-bedrock-connection = { group = "org.cloudburstmc.protocol", name = "bedrock-connection", version.ref = "cloudburstmc-protocol" }
 cloudburstmc-protocol-common = { group = "org.cloudburstmc.protocol", name = "common", version.ref = "cloudburstmc-protocol" }
@@ -119,7 +119,7 @@ cloudburstmc-protocol-common = { group = "org.cloudburstmc.protocol", name = "co
 [bundles]
 netty = [ "netty-common", "netty-buffer", "netty-codec", "netty-transport" ]
 junit-jupiter = [ "junit-jupiter-engine", "junit-jupiter-api", "junit-jupiter-params" ]
-# ✅ ADICIONADO: Bundle para CloudburstMC Protocol
+# â ADICIONADO: Bundle para CloudburstMC Protocol
 cloudburstmc-protocol = [ "cloudburstmc-protocol-bedrock-codec", "cloudburstmc-protocol-bedrock-connection", "cloudburstmc-protocol-common" ]
 
 [plugins]

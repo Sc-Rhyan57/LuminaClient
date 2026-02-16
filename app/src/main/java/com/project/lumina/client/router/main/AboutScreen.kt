@@ -279,7 +279,7 @@ fun AboutScreen() {
                             icon = painterResource(id = R.drawable.ic_github),
                             label = "GitHub",
                             onClick = {
-                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/TheProjectLumina/LuminaClient"))
+                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/Sc-Rhyan57/LuminaClient"))
                                 context.startActivity(intent)
                             }
                         )

@@ -11,14 +11,7 @@ import org.cloudburstmc.protocol.bedrock.packet.StartGamePacket
 import org.cloudburstmc.protocol.common.NamedDefinition
 import org.cloudburstmc.protocol.common.SimpleDefinitionRegistry
 
-/**
- * VERSÃO CORRIGIDA - Remove referências a campos inexistentes
- * 
- * ⚠️ CORREÇÕES:
- * - Removido packet.serverName (não existe na API)
- * - Usa apenas packet.levelName, levelId, serverId
- * - Imports corretos
- */
+
 @Suppress("MemberVisibilityCanBePrivate")
 class GamingPacketHandler(
     val luminaRelaySession: LuminaRelaySession

@@ -2,8 +2,8 @@ package org.cloudburstmc.protocol.bedrock.codec.v924.serializer;
 
 import io.netty.buffer.ByteBuf;
 import lombok.AccessLevel;
-import lombok.RequiredArgsConstructor;
 import lombok.Data;
+import lombok.RequiredArgsConstructor;
 import org.cloudburstmc.protocol.bedrock.codec.BedrockCodecHelper;
 import org.cloudburstmc.protocol.bedrock.codec.BedrockPacketSerializer;
 import org.cloudburstmc.protocol.bedrock.packet.VoxelShapesPacket;
@@ -54,7 +54,7 @@ public class VoxelShapesSerializer_v924 implements BedrockPacketSerializer<Voxel
         VarInts.writeUnsignedInt(buffer, packet.getNameMap().size());
         packet.getNameMap().forEach((k, v) -> {
             helper.writeString(buffer, k);
-            buffer.writeShortLE(v); 
+            buffer.writeShortLE(v);
         });
     }
 
@@ -71,19 +71,19 @@ public class VoxelShapesSerializer_v924 implements BedrockPacketSerializer<Voxel
                 short zSize = buf2.readUnsignedByte();
 
                 List<Short> storage = new ArrayList<>();
-                helper.readArray(buf2, storage, (ByteBuf::readUnsignedByte));
+                helper.readArray(buf2, storage, ByteBuf::readUnsignedByte);
 
                 return new VoxelCells(xSize, ySize, zSize, storage);
             });
 
             List<Float> xCoordinates = new ArrayList<>();
-            helper.readArray(buf, xCoordinates, (ByteBuf::readFloatLE));
+            helper.readArray(buf, xCoordinates, ByteBuf::readFloatLE);
 
             List<Float> yCoordinates = new ArrayList<>();
-            helper.readArray(buf, yCoordinates, (ByteBuf::readFloatLE));
+            helper.readArray(buf, yCoordinates, ByteBuf::readFloatLE);
 
             List<Float> zCoordinates = new ArrayList<>();
-            helper.readArray(buf, zCoordinates, (ByteBuf::readFloatLE));
+            helper.readArray(buf, zCoordinates, ByteBuf::readFloatLE);
 
             return new VoxelShape(cells, xCoordinates, yCoordinates, zCoordinates);
         });

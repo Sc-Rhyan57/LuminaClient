@@ -16,10 +16,6 @@ dependencies {
     api(libs.adventure.text.serializer.json)
     implementation(libs.jackson.annotations)
 
-    api(libs.cloudburstmc.protocol.bedrock.codec)
-    api(libs.cloudburstmc.protocol.bedrock.connection)
-    api(libs.cloudburstmc.protocol.common)
-    
     // Tests
     testImplementation(libs.junit)
 }

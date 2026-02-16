@@ -4,15 +4,7 @@ plugins {
     alias(libs.plugins.checkerframework)
 }
 
-repositories {
-    maven("https://repo.opencollab.dev/maven-snapshots/")
-    mavenCentral()
-}
-
 dependencies {
-
-    api(libs.bundles.cloudburstmc.protocol)
-    
     api(project(":Protocol:common"))
     api(platform(libs.fastutil.bom))
     api(libs.netty.buffer)
@@ -23,6 +15,10 @@ dependencies {
     api(libs.adventure.text.serializer.legacy)
     api(libs.adventure.text.serializer.json)
     implementation(libs.jackson.annotations)
+
+    api(libs.cloudburstmc.protocol.bedrock.codec)
+    api(libs.cloudburstmc.protocol.bedrock.connection)
+    api(libs.cloudburstmc.protocol.common)
     
     // Tests
     testImplementation(libs.junit)

@@ -1,39 +1,3 @@
-/*
- * © Project Lumina 2026 — Licensed under GNU GPLv3
- * You are free to use, modify, and redistribute this code under the terms
- * of the GNU General Public License v3. See the LICENSE file for details.
- *
- * ─────────────────────────────────────────────────────────────────────────────
- * This is open source — not open credit.
- *
- * If you're here to build, welcome. If you're here to repaint and reupload
- * with your tag slapped on it… you're not fooling anyone.
- *
- * Changing colors and class names doesn't make you a developer.
- * Copy-pasting isn't contribution.
- *
- * You have legal permission to fork. But ask yourself — are you improving,
- * or are you just recycling someone else's work to feed your ego?
- *
- * Open source isn't about low-effort clones or chasing clout.
- * It's about making things better. Sharper. Cleaner. Smarter.
- *
- * So go ahead, fork it — but bring something new to the table,
- * or don’t bother pretending.
- *
- * This message is philosophical. It does not override your legal rights under GPLv3.
- * ─────────────────────────────────────────────────────────────────────────────
- *
- * GPLv3 Summary:
- * - You have the freedom to run, study, share, and modify this software.
- * - If you distribute modified versions, you must also share the source code.
- * - You must keep this license and copyright intact.
- * - You cannot apply further restrictions — the freedom stays with everyone.
- * - This license is irrevocable, and applies to all future redistributions.
- *
- * Full text: https://www.gnu.org/licenses/gpl-3.0.html
- */
-
 #include <jni.h>
 #include <string>
 #include <vector>
@@ -101,13 +65,15 @@ static const std::vector<CodecInfo> protocols = {
         {844, "org/cloudburstmc/protocol/bedrock/codec/v844/Bedrock_v844"},
         {859, "org/cloudburstmc/protocol/bedrock/codec/v859/Bedrock_v859"},
         {860, "org/cloudburstmc/protocol/bedrock/codec/v860/Bedrock_v860"},
-        {897, "org/cloudburstmc/protocol/bedrock/codec/v898/Bedrock_v898"}
+        {897, "org/cloudburstmc/protocol/bedrock/codec/v897/Bedrock_v897"},
+        {898, "org/cloudburstmc/protocol/bedrock/codec/v898/Bedrock_v898"},
+        {924, "org/cloudburstmc/protocol/bedrock/codec/v924/Bedrock_v924"}
 };
 
 extern "C" JNIEXPORT jobject JNICALL
 Java_com_project_lumina_relay_listener_AutoCodecPacketListener_pickProtocolCodec(JNIEnv* env, jclass clazz, jint protocolVersion) {
 
-    jclass defaultCodecClass = env->FindClass("org/cloudburstmc/protocol/bedrock/codec/v898/Bedrock_v898");
+    jclass defaultCodecClass = env->FindClass("org/cloudburstmc/protocol/bedrock/codec/v924/Bedrock_v924");
     if (!defaultCodecClass) return nullptr;
     jfieldID codecField = env->GetStaticFieldID(defaultCodecClass, "CODEC", "Lorg/cloudburstmc/protocol/bedrock/codec/BedrockCodec;");
     if (!codecField) {

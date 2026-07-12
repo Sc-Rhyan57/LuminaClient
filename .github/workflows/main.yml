@@ -77,49 +77,43 @@ jobs:
         run: |
           NEW_PROTO="${{ inputs.protocol_version }}"
           UPSTREAM="https://github.com/CloudburstMC/Protocol.git"
-          LOCAL_CODEC_BASE="Protocol/bedrock-codec/src/main/java/org/cloudburstmc/protocol/bedrock/codec"
+          
+          # Caminhos ABSOLUTOS (nunca mais perde a referência com o cd)
+          WORKSPACE="${GITHUB_WORKSPACE}"
+          LOCAL_CODEC_BASE="${WORKSPACE}/Protocol/bedrock-codec/src/main/java/org/cloudburstmc/protocol/bedrock/codec"
           CODEC_DIR="${LOCAL_CODEC_BASE}/v${NEW_PROTO}"
 
-          # 1. DESTROI qualquer coisa que esteja no caminho (arquivo fantasma, pasta vazia, etc)
-          echo "=== Limpando caminho do Protocol/ ==="
-          if [ -e "Protocol" ]; then
-            rm -rf "Protocol"
-            echo "  ✅ Obstáculo removido."
+          # 1. Limpa qualquer coisa que esteja travando o caminho
+          if [ -e "${WORKSPACE}/Protocol" ]; then
+            rm -rf "${WORKSPACE}/Protocol"
           fi
           
-          # 2. Cria o diretório local exato onde os codecs vão ficar
+          # 2. Garante que a pasta existe no seu repositório
           mkdir -p "${LOCAL_CODEC_BASE}"
-          echo "  ✅ Diretório local garantido."
 
-          # 3. Sparse clone: baixa APENAS a pasta bedrock-codec
-          echo "=== Fazendo sparse clone (apenas bedrock-codec) ==="
+          # 3. Baixa SOMENTE o bedrock-codec do CloudburstMC
           git clone --depth 1 --branch 3.0 --filter=blob:none --sparse "${UPSTREAM}" /tmp/protocol-upstream
           cd /tmp/protocol-upstream
-          
-          # SOLUÇÃO DO BUG DO GIT 2.54: Usar apenas o nome da pasta raiz!
-          # Se colocar o caminho longo, o Git 2.54 ignora silenciosamente.
           git sparse-checkout set bedrock-codec
           
-          UPSTREAM_CODEC_BASE="/tmp/protocol-upstream/bedrock-codec/src/main/java/org/cloudburstmc/protocol/bedrock/codec"
+          UPSTREAM_CODEC="/tmp/protocol-upstream/bedrock-codec/src/main/java/org/cloudburstmc/protocol/bedrock/codec"
           ADDED_COUNT=0
 
-          # 4. Copia SOMENTE as pastas v* que não existem aqui
-          echo "=== Sincronizando codecs faltantes... ==="
-          for dir in "${UPSTREAM_CODEC_BASE}"/v*; do
-            # Verifica se realmente é um diretório (evita erros de glob vazio)
+          # 4. Copia SOMENTE as pastas v* que faltam
+          for dir in "${UPSTREAM_CODEC}"/v*; do
             if [ -d "$dir" ]; then
               CODEC_NAME=$(basename "$dir")
               if [ ! -d "${LOCAL_CODEC_BASE}/${CODEC_NAME}" ]; then
-                cp -r "$dir" "${LOCAL_CODEC_BASE}/"
+                cp -r "$dir" "${LOCAL_CODEC_BASE}/${CODEC_NAME}"
                 echo "  ✅ Novo codec adicionado: v${CODEC_NAME}"
                 ADDED_COUNT=$((ADDED_COUNT + 1))
               fi
             fi
           done
           
-          # Limpa lixo
+          # 5. Limpa lixo e volta pro workspace
           rm -rf /tmp/protocol-upstream
-          cd $GITHUB_WORKSPACE
+          cd "${WORKSPACE}"
           
           if [ $ADDED_COUNT -gt 0 ]; then
             echo "✅ ${ADDED_COUNT} codecs novos adicionados com sucesso!"
@@ -127,7 +121,7 @@ jobs:
             echo "ℹ️  Nenhum codec faltante encontrado."
           fi
           
-          # Verifica o codec pedido
+          # 6. Verifica se o codec pedido existe
           if [ -d "$CODEC_DIR" ]; then
             echo "codec_exists=true" >> $GITHUB_OUTPUT
             echo "✅ Codec v${NEW_PROTO} está disponível."

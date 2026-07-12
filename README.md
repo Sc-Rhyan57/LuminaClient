@@ -1,3 +1,5 @@
+#  I'M JUST CHALLENGING SOME AIs, I DON'T WANT TROUBLE WITH ANYONE!!! IF YOU WANT ME TO DELETE THIS REPOSITORY, JUST LET ME KNOW ON DISCORD!!!
+
 # Lumina Client
 
 ![Lumina Client Logo](./images/lumina.png)  

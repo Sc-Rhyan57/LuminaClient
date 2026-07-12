@@ -22,152 +22,194 @@ jobs:
 
     steps:
       # ────────────────────────────────────────────────────────
-      # 1. CHECKOUT (COM SUBMÓDULOS PARA NÃO DAR ERRO DE PASTA VAZIA)
+      # 1. CHECKOUT
       # ────────────────────────────────────────────────────────
       - name: 📥 Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          submodules: recursive 
+          submodules: recursive
 
       # ────────────────────────────────────────────────────────
       # 2. DETECTAR VERSÃO ATUAL
       # ────────────────────────────────────────────────────────
-      - name: 🔎 Inspecionar estrutura dos arquivos
-        run: |
-          echo "=== ProtocolHelper.cpp (últimas entradas) ==="
-          grep -n 'cloudburstmc/protocol/bedrock/codec' Lunaris/src/main/cpp/ProtocolHelper.cpp | tail -10
-
       - name: 🔎 Detectar versão atual no ProtocolHelper.cpp
         id: detect_protocol
         run: |
           FILE="Lunaris/src/main/cpp/ProtocolHelper.cpp"
+          NEW_PROTO="${{ inputs.protocol_version }}"
 
+          echo "=== Últimas entradas da tabela ==="
+          grep -n 'cloudburstmc/protocol/bedrock/codec' "$FILE" | tail -10
+
+          # Protocolo mais alto atualmente no fallback (linha com codec fora da tabela)
           FALLBACK_PROTO=$(grep -oP 'bedrock/codec/v\K[0-9]+(?=/Bedrock_v[0-9]+")' "$FILE" | sort -n | tail -1)
           echo "fallback_proto=$FALLBACK_PROTO" >> $GITHUB_OUTPUT
+          echo "Fallback atual: v${FALLBACK_PROTO}"
 
-          LAST_TABLE_PROTO=$(grep -oP '\{\s*\K[0-9]+(?=\s*,\s*"org/cloudburstmc)' "$FILE" | sort -n | tail -1)
-          if [ -z "$LAST_TABLE_PROTO" ]; then
-            LAST_TABLE_PROTO=$(grep -oP '[0-9]+(?=,\s*"org/cloudburstmc/protocol/bedrock/codec)' "$FILE" | sort -n | tail -1)
-          fi
+          # Maior protocolo dentro da tabela de versões (vetor protocols[])
+          # Captura padrão: { 898, "org/cloudburstmc/..."  ou  { 898, "org/cloudburstmc/...
+          LAST_TABLE_PROTO=$(grep -oP '^\s*\{\s*\K[0-9]+(?=\s*,\s*"org/cloudburstmc/protocol/bedrock/codec)' "$FILE" | sort -n | tail -1)
           echo "last_table_proto=$LAST_TABLE_PROTO" >> $GITHUB_OUTPUT
+          echo "Maior protocolo na tabela: v${LAST_TABLE_PROTO}"
 
+          # Número da linha dessa última entrada (para inserir depois dela)
           if [ -n "$LAST_TABLE_PROTO" ]; then
-            LAST_TABLE_LINE=$(grep -n "$LAST_TABLE_PROTO" "$FILE" | grep 'cloudburstmc' | tail -1 | cut -d: -f1)
+            LAST_TABLE_LINE=$(grep -n "^\s*{ *${LAST_TABLE_PROTO} *," "$FILE" | grep 'cloudburstmc' | tail -1 | cut -d: -f1)
             echo "last_table_line=$LAST_TABLE_LINE" >> $GITHUB_OUTPUT
+            echo "Linha da última entrada: ${LAST_TABLE_LINE}"
+          fi
+
+          # Verificar se o novo protocolo JÁ existe na tabela
+          if grep -qP "^\s*\{\s*${NEW_PROTO}\s*," "$FILE"; then
+            echo "proto_already_in_table=true" >> $GITHUB_OUTPUT
+            echo "⚠️  v${NEW_PROTO} já existe na tabela — entrada não será duplicada."
+          else
+            echo "proto_already_in_table=false" >> $GITHUB_OUTPUT
+            echo "✅ v${NEW_PROTO} não encontrado na tabela — será adicionado."
           fi
 
       - name: 🔎 Detectar versão atual no Lunaris.cpp
         id: detect_lunaris
         run: |
           FILE="Lunaris/src/main/cpp/Lunaris.cpp"
-          CURRENT_MC=$(grep -oP '"[0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?"' "$FILE" | tr -d '"' | grep -v '^0\.' | head -1)
+
+          echo "=== Conteúdo relevante do Lunaris.cpp ==="
+          grep -n 'version\|proto\|MCPE\|1\.[0-9]' "$FILE" | head -20
+
+          # Versão do MC (ex: "1.21.130") — exclui versões que começam com 0.
+          CURRENT_MC=$(grep -oP '"[0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?"' "$FILE" \
+            | tr -d '"' | grep -v '^0\.' | head -1)
           echo "current_mc=$CURRENT_MC" >> $GITHUB_OUTPUT
-          CURRENT_PROTO=$(grep -oP '(?:protocolVersion|CallIntMethod)[^;]*?(\b[0-9]{3,4}\b)' "$FILE" | grep -oP '\b[0-9]{3,4}\b' | head -1)
+          echo "Versão MC atual: ${CURRENT_MC}"
+
+          # Protocolo atual — busca o número inteiro passado ao CallIntMethod com "protocolVersion"
+          # Tentativa 1: padrão protocolVersion ... 898
+          CURRENT_PROTO=$(grep -oP 'protocolVersion[^;]{0,60}?\b([0-9]{3,4})\b' "$FILE" \
+            | grep -oP '\b[0-9]{3,4}\b' | head -1)
+
+          # Tentativa 2: qualquer número de 3-4 dígitos passado como Int via JNI (CallIntMethod)
           if [ -z "$CURRENT_PROTO" ]; then
-            CURRENT_PROTO=$(grep -oP '\b[89][0-9]{2}\b|\b[0-9]{4}\b' "$FILE" | head -1)
+            CURRENT_PROTO=$(grep -oP 'CallIntMethod[^;]{0,80}?\b([89][0-9]{2}|[0-9]{4})\b' "$FILE" \
+              | grep -oP '\b[89][0-9]{2}\b|\b[0-9]{4}\b' | head -1)
           fi
+
+          # Tentativa 3: fallback geral — primeiro número 3-4 dígitos >= 800
+          if [ -z "$CURRENT_PROTO" ]; then
+            CURRENT_PROTO=$(grep -oP '\b(8[0-9]{2}|9[0-9]{2}|1[0-9]{3})\b' "$FILE" | head -1)
+          fi
+
           echo "current_proto=$CURRENT_PROTO" >> $GITHUB_OUTPUT
+          echo "Protocolo atual: ${CURRENT_PROTO}"
 
       # ────────────────────────────────────────────────────────
-      # 3. SINCRONIZAR APENAS OS CODECS (SEGURANÇA MÁXIMA)
+      # 3. SINCRONIZAR OS CODECS SEM APAGAR NADA
       # ────────────────────────────────────────────────────────
-  - name: "🔄 Sincronizar APENAS os Codecs (CloudburstMC branch 3.0)"
-  id: update_protocol
-  run: |
-    NEW_PROTO="${{ inputs.protocol_version }}"
-    UPSTREAM="https://github.com/CloudburstMC/Protocol.git"
-    
-    WORKSPACE="${GITHUB_WORKSPACE}"
-    LOCAL_CODEC_BASE="${WORKSPACE}/Protocol/bedrock-codec/src/main/java/org/cloudburstmc/protocol/bedrock/codec"
-    CODEC_DIR="${LOCAL_CODEC_BASE}/v${NEW_PROTO}"
-
-    # ✅ CORREÇÃO: só garante que a pasta de destino existe, sem apagar nada
-    mkdir -p "${LOCAL_CODEC_BASE}"
-
-    # Baixa SOMENTE o bedrock-codec do CloudburstMC em pasta temporária
-    rm -rf /tmp/protocol-upstream
-    git clone --depth 1 --branch 3.0 --filter=blob:none --sparse "${UPSTREAM}" /tmp/protocol-upstream
-    cd /tmp/protocol-upstream
-    git sparse-checkout set bedrock-codec
-    
-    UPSTREAM_CODEC="/tmp/protocol-upstream/bedrock-codec/src/main/java/org/cloudburstmc/protocol/bedrock/codec"
-    ADDED_COUNT=0
-
-    # Copia SOMENTE as pastas v* que faltam
-    for dir in "${UPSTREAM_CODEC}"/v*; do
-      if [ -d "$dir" ]; then
-        CODEC_NAME=$(basename "$dir")
-        if [ ! -d "${LOCAL_CODEC_BASE}/${CODEC_NAME}" ]; then
-          cp -r "$dir" "${LOCAL_CODEC_BASE}/${CODEC_NAME}"
-          echo "  ✅ Novo codec adicionado: ${CODEC_NAME}"
-          ADDED_COUNT=$((ADDED_COUNT + 1))
-        fi
-      fi
-    done
-    
-    # Limpa temporário e volta pro workspace
-    rm -rf /tmp/protocol-upstream
-    cd "${WORKSPACE}"
-    
-    if [ $ADDED_COUNT -gt 0 ]; then
-      echo "✅ ${ADDED_COUNT} codecs novos adicionados com sucesso!"
-    else
-      echo "ℹ️  Nenhum codec faltante encontrado."
-    fi
-    
-    # Verifica se o codec pedido existe
-    if [ -d "$CODEC_DIR" ]; then
-      echo "codec_exists=true" >> $GITHUB_OUTPUT
-      echo "✅ Codec v${NEW_PROTO} está disponível."
-    else
-      echo "codec_exists=false" >> $GITHUB_OUTPUT
-      echo "❌ Codec v${NEW_PROTO} NÃO existe no upstream."
-    fi
-          
-      # ────────────────────────────────────────────────────────
-      # 4. VERIFICAR SE PRECISA ATUALIZAR O C++
-      # ────────────────────────────────────────────────────────
-      - name: 🔍 Verificar se atualização é necessária
-        id: check_needed
+      - name: "🔄 Sincronizar Codecs (CloudburstMC branch 3.0)"
+        id: update_protocol
         run: |
           NEW_PROTO="${{ inputs.protocol_version }}"
-          if grep -q "$NEW_PROTO" Lunaris/src/main/cpp/ProtocolHelper.cpp; then
-            echo "proto_in_table=true" >> $GITHUB_OUTPUT
+          UPSTREAM="https://github.com/CloudburstMC/Protocol.git"
+
+          WORKSPACE="${GITHUB_WORKSPACE}"
+          LOCAL_CODEC_BASE="${WORKSPACE}/Protocol/bedrock-codec/src/main/java/org/cloudburstmc/protocol/bedrock/codec"
+          CODEC_DIR="${LOCAL_CODEC_BASE}/v${NEW_PROTO}"
+
+          # Garante que a pasta de destino existe — SEM apagar nada existente
+          mkdir -p "${LOCAL_CODEC_BASE}"
+
+          # Limpa apenas a pasta temporária (não o repo)
+          rm -rf /tmp/protocol-upstream
+
+          # Clone esparso: apenas bedrock-codec
+          git clone --depth 1 --branch 3.0 --filter=blob:none --sparse \
+            "${UPSTREAM}" /tmp/protocol-upstream
+          cd /tmp/protocol-upstream
+          git sparse-checkout set bedrock-codec
+
+          UPSTREAM_CODEC="/tmp/protocol-upstream/bedrock-codec/src/main/java/org/cloudburstmc/protocol/bedrock/codec"
+          ADDED_COUNT=0
+
+          # Copia apenas as pastas v* que ainda não existem localmente
+          for dir in "${UPSTREAM_CODEC}"/v*; do
+            if [ -d "$dir" ]; then
+              CODEC_NAME=$(basename "$dir")
+              if [ ! -d "${LOCAL_CODEC_BASE}/${CODEC_NAME}" ]; then
+                cp -r "$dir" "${LOCAL_CODEC_BASE}/${CODEC_NAME}"
+                echo "  ✅ Codec adicionado: ${CODEC_NAME}"
+                ADDED_COUNT=$((ADDED_COUNT + 1))
+              else
+                echo "  ⏭️  Codec já existe, ignorado: ${CODEC_NAME}"
+              fi
+            fi
+          done
+
+          rm -rf /tmp/protocol-upstream
+          cd "${WORKSPACE}"
+
+          echo "Total de codecs novos adicionados: ${ADDED_COUNT}"
+
+          if [ -d "$CODEC_DIR" ]; then
+            echo "codec_exists=true" >> $GITHUB_OUTPUT
+            echo "✅ Codec v${NEW_PROTO} está disponível localmente."
           else
-            echo "proto_in_table=false" >> $GITHUB_OUTPUT
+            echo "codec_exists=false" >> $GITHUB_OUTPUT
+            echo "❌ Codec v${NEW_PROTO} NÃO encontrado no upstream após sincronização."
           fi
 
       # ────────────────────────────────────────────────────────
-      # 5. ATUALIZAR ProtocolHelper.cpp
+      # 4. ATUALIZAR ProtocolHelper.cpp
       # ────────────────────────────────────────────────────────
-      - name: "✏️ [1/2] Atualizar ProtocolHelper.cpp"
+      - name: "✏️ [1/3] Atualizar ProtocolHelper.cpp"
         run: |
           FILE="Lunaris/src/main/cpp/ProtocolHelper.cpp"
           NEW_PROTO="${{ inputs.protocol_version }}"
           FALLBACK="${{ steps.detect_protocol.outputs.fallback_proto }}"
           LAST_TABLE_LINE="${{ steps.detect_protocol.outputs.last_table_line }}"
+          ALREADY_IN_TABLE="${{ steps.detect_protocol.outputs.proto_already_in_table }}"
 
-          if [ "${{ steps.check_needed.outputs.proto_in_table }}" = "false" ]; then
+          # ── 4a. Inserir nova entrada na tabela (somente se ainda não existe) ──
+          if [ "$ALREADY_IN_TABLE" = "false" ]; then
             if [ -n "$LAST_TABLE_LINE" ]; then
-              # Garante a vírgula na linha anterior
-              sed -i "${LAST_TABLE_LINE}s/\"}$/\"},/" "$FILE"
+              # Garante vírgula no final da linha anterior (se não tiver)
+              sed -i "${LAST_TABLE_LINE}s/}[[:space:]]*$/},/" "$FILE"
+
+              # Detecta a indentação da linha anterior para manter consistência
               INDENT=$(sed -n "${LAST_TABLE_LINE}p" "$FILE" | grep -oP '^\s+')
+
+              # Monta a nova linha no formato correto
               NEW_ENTRY="${INDENT}{ ${NEW_PROTO}, \"org/cloudburstmc/protocol/bedrock/codec/v${NEW_PROTO}/Bedrock_v${NEW_PROTO}\" },"
+
+              # Insere logo após a última linha da tabela
               sed -i "${LAST_TABLE_LINE}a\\${NEW_ENTRY}" "$FILE"
-              echo "✅ Nova entrada adicionada na tabela C++."
+              echo "✅ Entrada v${NEW_PROTO} adicionada à tabela."
+            else
+              echo "❌ Não foi possível detectar a última linha da tabela. Abortando inserção."
+              exit 1
             fi
+          else
+            echo "⏭️  v${NEW_PROTO} já existe na tabela — nenhuma inserção feita."
           fi
 
+          # ── 4b. Atualizar o codec de fallback (default) ──
+          # O fallback é a linha FORA da tabela que aponta para o codec mais recente.
+          # Só atualiza se o fallback atual for diferente do novo protocolo.
           if [ -n "$FALLBACK" ] && [ "$FALLBACK" != "$NEW_PROTO" ]; then
-            sed -i "s|/codec/v${FALLBACK}/Bedrock_v${FALLBACK}\"|/codec/v${NEW_PROTO}/Bedrock_v${NEW_PROTO}\"|g" "$FILE"
+            sed -i \
+              "s|/codec/v${FALLBACK}/Bedrock_v${FALLBACK}\"|/codec/v${NEW_PROTO}/Bedrock_v${NEW_PROTO}\"|g" \
+              "$FILE"
             echo "✅ Fallback atualizado: v${FALLBACK} → v${NEW_PROTO}"
+          else
+            echo "⏭️  Fallback já está em v${NEW_PROTO} ou não detectado — sem alteração."
           fi
 
+          echo "=== Estado final das últimas linhas da tabela ==="
+          grep -n 'cloudburstmc/protocol/bedrock/codec' "$FILE" | tail -12
+
       # ────────────────────────────────────────────────────────
-      # 6. ATUALIZAR Lunaris.cpp
+      # 5. ATUALIZAR Lunaris.cpp (version string + protocolVersion no BedrockPong)
       # ────────────────────────────────────────────────────────
-      - name: "✏️ [2/2] Atualizar Lunaris.cpp"
+      - name: "✏️ [2/3] Atualizar Lunaris.cpp"
         run: |
           FILE="Lunaris/src/main/cpp/Lunaris.cpp"
           NEW_MC="${{ inputs.mc_version }}"
@@ -175,16 +217,139 @@ jobs:
           OLD_MC="${{ steps.detect_lunaris.outputs.current_mc }}"
           OLD_PROTO="${{ steps.detect_lunaris.outputs.current_proto }}"
 
+          echo "Substituindo: MC '${OLD_MC}' → '${NEW_MC}' | Proto '${OLD_PROTO}' → '${NEW_PROTO}'"
+
+          # ── 5a. Atualizar version string (ex: "1.21.130" → "1.21.140") ──
           if [ -n "$OLD_MC" ] && [ "$OLD_MC" != "$NEW_MC" ]; then
             sed -i "s|\"${OLD_MC}\"|\"${NEW_MC}\"|g" "$FILE"
+            echo "✅ Version string atualizada: ${OLD_MC} → ${NEW_MC}"
+          else
+            echo "⏭️  Version string já está em ${NEW_MC} ou não detectada."
           fi
+
+          # ── 5b. Atualizar protocolVersion no BedrockPong (advertisement) ──
+          # Busca especificamente o padrão de setProtocolVersion ou o número passado
+          # como argumento inteiro no CallIntMethod referente a protocolVersion.
           if [ -n "$OLD_PROTO" ] && [ "$OLD_PROTO" != "$NEW_PROTO" ]; then
-            sed -i "s|\b${OLD_PROTO}\b|${NEW_PROTO}|g" "$FILE"
+            # Substituição com word boundary para não trocar números dentro de strings
+            # ou versões de SDK que coincidam por acaso
+            sed -i "s/\b${OLD_PROTO}\b/${NEW_PROTO}/g" "$FILE"
+            echo "✅ ProtocolVersion atualizado: ${OLD_PROTO} → ${NEW_PROTO}"
+          else
+            echo "⏭️  ProtocolVersion já está em ${NEW_PROTO} ou não detectado."
           fi
-          echo "✅ Lunaris.cpp atualizado."
+
+          echo "=== Verificação pós-edição ==="
+          grep -n 'version\|proto\|MCPE\|1\.[0-9]' "$FILE" | head -20
 
       # ────────────────────────────────────────────────────────
-      # 7. COMMIT + PUSH + PR
+      # 6. ATUALIZAR AutoCodecPacketListener.kt (patch de compatibilidade)
+      # ────────────────────────────────────────────────────────
+      - name: "✏️ [3/3] Verificar AutoCodecPacketListener.kt"
+        run: |
+          LISTENER="Lunaris/src/main/java/com/project/lumina/relay/listener/AutoCodecPacketListener.kt"
+          NEW_PROTO="${{ inputs.protocol_version }}"
+
+          if [ ! -f "$LISTENER" ]; then
+            echo "⚠️  AutoCodecPacketListener.kt não encontrado — pulando."
+            exit 0
+          fi
+
+          echo "=== Conteúdo atual do patchCodecIfNeeded ==="
+          grep -n 'patchCodec\|729\|v[0-9]\{3\}' "$LISTENER" | head -20
+
+          # O patch aplica downgrade de serializers para codecs acima de v729.
+          # Se o novo protocolo é >= 730, ele já cai no bloco de patch automaticamente.
+          # Verificamos apenas se há algum hardcode do protocolo antigo que precise ser
+          # atualizado (ex: uma constante como "if (version > 898)" que limita o patch).
+          OLD_PROTO="${{ steps.detect_lunaris.outputs.current_proto }}"
+
+          if [ -n "$OLD_PROTO" ] && [ "$OLD_PROTO" != "$NEW_PROTO" ]; then
+            # Só substitui se houver um limite hardcoded com o protocolo antigo
+            if grep -qP "\b${OLD_PROTO}\b" "$LISTENER"; then
+              sed -i "s/\b${OLD_PROTO}\b/${NEW_PROTO}/g" "$LISTENER"
+              echo "✅ Referências ao protocolo ${OLD_PROTO} atualizadas no listener."
+            else
+              echo "✅ Nenhum hardcode do protocolo antigo encontrado — listener OK."
+            fi
+          else
+            echo "✅ Nenhuma atualização necessária no listener."
+          fi
+
+      # ────────────────────────────────────────────────────────
+      # 7. VALIDAÇÃO FINAL
+      # ────────────────────────────────────────────────────────
+      - name: "🔍 Validação final"
+        run: |
+          NEW_PROTO="${{ inputs.protocol_version }}"
+          NEW_MC="${{ inputs.mc_version }}"
+          ERRORS=0
+
+          echo "=== ProtocolHelper.cpp — verificando entradas ==="
+          # Verifica se a entrada nova está na tabela
+          if grep -qP "^\s*\{\s*${NEW_PROTO}\s*," \
+              Lunaris/src/main/cpp/ProtocolHelper.cpp; then
+            echo "✅ v${NEW_PROTO} encontrado na tabela."
+          else
+            echo "❌ v${NEW_PROTO} NÃO encontrado na tabela!"
+            ERRORS=$((ERRORS + 1))
+          fi
+
+          # Verifica se o fallback foi atualizado
+          if grep -qP "codec/v${NEW_PROTO}/Bedrock_v${NEW_PROTO}" \
+              Lunaris/src/main/cpp/ProtocolHelper.cpp; then
+            echo "✅ Fallback aponta para v${NEW_PROTO}."
+          else
+            echo "❌ Fallback NÃO aponta para v${NEW_PROTO}!"
+            ERRORS=$((ERRORS + 1))
+          fi
+
+          # Verifica se há duplicatas na tabela
+          DUPES=$(grep -oP "^\s*\{\s*\K${NEW_PROTO}(?=\s*,)" \
+            Lunaris/src/main/cpp/ProtocolHelper.cpp | wc -l)
+          if [ "$DUPES" -gt 1 ]; then
+            echo "❌ Entrada duplicada detectada! (${DUPES} ocorrências de ${NEW_PROTO})"
+            ERRORS=$((ERRORS + 1))
+          else
+            echo "✅ Sem duplicatas na tabela."
+          fi
+
+          echo ""
+          echo "=== Lunaris.cpp — verificando version string e protocolo ==="
+          if grep -q "\"${NEW_MC}\"" Lunaris/src/main/cpp/Lunaris.cpp; then
+            echo "✅ Version string '${NEW_MC}' encontrada."
+          else
+            echo "❌ Version string '${NEW_MC}' NÃO encontrada!"
+            ERRORS=$((ERRORS + 1))
+          fi
+
+          if grep -qP "\b${NEW_PROTO}\b" Lunaris/src/main/cpp/Lunaris.cpp; then
+            echo "✅ ProtocolVersion ${NEW_PROTO} encontrado."
+          else
+            echo "❌ ProtocolVersion ${NEW_PROTO} NÃO encontrado!"
+            ERRORS=$((ERRORS + 1))
+          fi
+
+          echo ""
+          echo "=== Codec local ==="
+          CODEC_PATH="Protocol/bedrock-codec/src/main/java/org/cloudburstmc/protocol/bedrock/codec/v${NEW_PROTO}"
+          if [ -d "$CODEC_PATH" ]; then
+            echo "✅ Pasta do codec v${NEW_PROTO} existe."
+          else
+            echo "❌ Pasta do codec v${NEW_PROTO} NÃO existe!"
+            ERRORS=$((ERRORS + 1))
+          fi
+
+          echo ""
+          if [ "$ERRORS" -gt 0 ]; then
+            echo "❌ Validação falhou com ${ERRORS} erro(s). Verifique os logs acima."
+            exit 1
+          else
+            echo "✅ Todas as validações passaram com sucesso!"
+          fi
+
+      # ────────────────────────────────────────────────────────
+      # 8. COMMIT + PUSH + PR
       # ────────────────────────────────────────────────────────
       - name: 🔀 Commit e Push
         id: commit_push
@@ -195,9 +360,13 @@ jobs:
 
           CHANGED=$(git diff --name-only)
           if [ -z "$CHANGED" ]; then
+            echo "ℹ️  Nenhuma alteração detectada — nada a commitar."
             echo "branch=" >> $GITHUB_OUTPUT
             exit 0
           fi
+
+          echo "Arquivos alterados:"
+          echo "$CHANGED"
 
           git checkout -b "$BRANCH"
           git add -A
@@ -216,31 +385,38 @@ jobs:
           CODEC_EXISTS: ${{ steps.update_protocol.outputs.codec_exists }}
         with:
           script: |
-            const newMC = process.env.NEW_MC;
+            const newMC    = process.env.NEW_MC;
             const newProto = process.env.NEW_PROTO;
-            const branch = process.env.BRANCH;
+            const branch   = process.env.BRANCH;
             const codecExists = process.env.CODEC_EXISTS;
 
             const codecLine = codecExists === 'true'
-              ? "> ✅ Codec local `v" + newProto + "` encontrado em `Protocol/bedrock-codec/`."
-              : "> ⚠️ **ATENÇÃO**: O codec `v" + newProto + "` **NÃO foi encontrado** no upstream.";
+              ? `> ✅ Codec local \`v${newProto}\` encontrado em \`Protocol/bedrock-codec/\`.`
+              : `> ⚠️ **ATENÇÃO**: O codec \`v${newProto}\` **NÃO foi encontrado** no upstream.`;
 
             const body = [
-              "## Update Minecraft Bedrock " + newMC,
+              `## Atualização: Minecraft Bedrock ${newMC}`,
               "",
-              "Gerado automaticamente.",
+              "Gerado automaticamente pelo workflow de atualização.",
               "",
               codecLine,
               "",
+              "### Arquivos alterados:",
+              `- \`Lunaris/src/main/cpp/ProtocolHelper.cpp\` — nova entrada v${newProto} + fallback`,
+              `- \`Lunaris/src/main/cpp/Lunaris.cpp\` — version string + protocolVersion`,
+              `- \`Protocol/bedrock-codec/v${newProto}/\` — codec sincronizado`,
+              `- \`Lunaris/src/main/java/com/project/lumina/relay/listener/AutoCodecPacketListener.kt\` — verificado`,
+              "",
               "### Checklist:",
-              "- [ ] Build completo",
-              "- [ ] Testar conexão"
+              "- [ ] Build completo (arm64-v8a, armeabi-v7a, x86, x86_64)",
+              "- [ ] Testar conexão com servidor Bedrock",
+              "- [ ] Confirmar que não há duplicatas na tabela de protocolos",
             ].join("\n");
 
             await github.rest.pulls.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              title: "feat: Minecraft Bedrock " + newMC + " support (protocol v" + newProto + ")",
+              title: `feat: Minecraft Bedrock ${newMC} support (protocol v${newProto})`,
               head: branch,
               base: "main",
               body: body,

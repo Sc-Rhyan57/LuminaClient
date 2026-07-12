@@ -126,9 +126,8 @@ jobs:
           mkdir -p "$DATA_DST"
           
           if [ -d "$DATA_SRC" ]; then
-            # Usa tar para copiar recursivamente, criando subpastas e mesclando sem sobrescrever
-            cd "$DATA_SRC"
-            tar cf - . | (cd "$DATA_DST" && tar xf - --keep-old-files)
+            # O rsync copia tudo, cria subpastas novas, e ignora arquivos que já existem localmente
+            rsync -a --ignore-existing "$DATA_SRC/" "$DATA_DST/"
             
             DATA_COUNT=$(find "$DATA_DST" -name '*.java' | wc -l)
             echo "✅ pasta data/ sincronizada (${DATA_COUNT} arquivos .java no destino)."

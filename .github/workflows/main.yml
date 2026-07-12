@@ -80,39 +80,44 @@ jobs:
           LOCAL_CODEC_BASE="Protocol/bedrock-codec/src/main/java/org/cloudburstmc/protocol/bedrock/codec"
           CODEC_DIR="${LOCAL_CODEC_BASE}/v${NEW_PROTO}"
 
-          # O GIT CRIA UM ARQUIVO FANTASMA NO LUGAR DA PASTA. APAGA ELE PRIMEIRO!
-          if [ -f "Protocol" ]; then
-            rm -f "Protocol"
-            echo "⚠️  Arquivo fantasma do git (gitlink) removido."
-          fi
-          if [ -d "Protocol" ] && [ -z "$(ls -A Protocol)" ]; then
+          # 1. DESTROI qualquer coisa que esteja no caminho (arquivo fantasma, pasta vazia, etc)
+          echo "=== Limpando caminho do Protocol/ ==="
+          if [ -e "Protocol" ]; then
             rm -rf "Protocol"
-            echo "⚠️  Pasta vazia do git removida."
+            echo "  ✅ Obstáculo removido."
           fi
-
-          # Agora sim, cria a árvore de pastas com segurança
+          
+          # 2. Cria o diretório local exato onde os codecs vão ficar
           mkdir -p "${LOCAL_CODEC_BASE}"
+          echo "  ✅ Diretório local garantido."
 
-          # Clone invisível (Sparse Checkout) pegando SÓ a pasta de codecs
-          echo "=== Fazendo sparse clone dos codecs do upstream... ==="
+          # 3. Sparse clone: baixa APENAS a pasta bedrock-codec
+          echo "=== Fazendo sparse clone (apenas bedrock-codec) ==="
           git clone --depth 1 --branch 3.0 --filter=blob:none --sparse "${UPSTREAM}" /tmp/protocol-upstream
           cd /tmp/protocol-upstream
-          git sparse-checkout set bedrock-codec/src/main/java/org/cloudburstmc/protocol/bedrock/codec
+          
+          # SOLUÇÃO DO BUG DO GIT 2.54: Usar apenas o nome da pasta raiz!
+          # Se colocar o caminho longo, o Git 2.54 ignora silenciosamente.
+          git sparse-checkout set bedrock-codec
           
           UPSTREAM_CODEC_BASE="/tmp/protocol-upstream/bedrock-codec/src/main/java/org/cloudburstmc/protocol/bedrock/codec"
           ADDED_COUNT=0
 
-          # Copia SOMENTE as pastas v* que não existem aqui
+          # 4. Copia SOMENTE as pastas v* que não existem aqui
           echo "=== Sincronizando codecs faltantes... ==="
           for dir in "${UPSTREAM_CODEC_BASE}"/v*; do
-            CODEC_NAME=$(basename "$dir")
-            if [ ! -d "${LOCAL_CODEC_BASE}/${CODEC_NAME}" ]; then
-              cp -r "$dir" "${LOCAL_CODEC_BASE}/"
-              echo "  ✅ Novo codec adicionado: v${CODEC_NAME}"
-              ADDED_COUNT=$((ADDED_COUNT + 1))
+            # Verifica se realmente é um diretório (evita erros de glob vazio)
+            if [ -d "$dir" ]; then
+              CODEC_NAME=$(basename "$dir")
+              if [ ! -d "${LOCAL_CODEC_BASE}/${CODEC_NAME}" ]; then
+                cp -r "$dir" "${LOCAL_CODEC_BASE}/"
+                echo "  ✅ Novo codec adicionado: v${CODEC_NAME}"
+                ADDED_COUNT=$((ADDED_COUNT + 1))
+              fi
             fi
           done
           
+          # Limpa lixo
           rm -rf /tmp/protocol-upstream
           cd $GITHUB_WORKSPACE
           

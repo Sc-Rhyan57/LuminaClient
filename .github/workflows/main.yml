@@ -104,6 +104,7 @@ jobs:
           UPSTREAM_CODEC="/tmp/protocol-upstream/bedrock-codec/src/main/java/org/cloudburstmc/protocol/bedrock/codec"
           ADDED_COUNT=0
 
+          # Copia apenas as pastas v* que ainda não existem localmente
           for dir in "${UPSTREAM_CODEC}"/v*; do
             if [ -d "$dir" ]; then
               CODEC_NAME=$(basename "$dir")
@@ -118,18 +119,22 @@ jobs:
           done
 
           # ── Sincroniza também a pasta data/ ──
-          DATA_SRC="${UPSTREAM_CODEC}/../data"
-          DATA_DST="${LOCAL_CODEC_BASE}/../data"
+          # ATENÇÃO: Este bloco DEVE vir antes do "rm -rf /tmp/protocol-upstream"
+          DATA_SRC="/tmp/protocol-upstream/bedrock-codec/src/main/java/org/cloudburstmc/protocol/bedrock/data"
+          DATA_DST="${WORKSPACE}/Protocol/bedrock-codec/src/main/java/org/cloudburstmc/protocol/bedrock/data"
+          
           if [ -d "$DATA_SRC" ]; then
             echo "🔄 Sincronizando pasta data/..."
             mkdir -p "$DATA_DST"
-            cp -rn "$DATA_SRC/." "$DATA_DST/"
+            # Usa rsync para copiar recursivamente arquivos novos sem apagar os existentes
+            rsync -a --ignore-existing "$DATA_SRC/" "$DATA_DST/"
             DATA_COUNT=$(find "$DATA_DST" -name '*.java' | wc -l)
             echo "✅ pasta data/ sincronizada (${DATA_COUNT} arquivos .java)."
           else
             echo "⚠️  pasta data/ não encontrada no upstream."
           fi
 
+          # Agora sim, podemos limpar o temporário
           rm -rf /tmp/protocol-upstream
           cd "${WORKSPACE}"
 
@@ -142,7 +147,7 @@ jobs:
             echo "codec_exists=false" >> $GITHUB_OUTPUT
             echo "❌ Codec v${NEW_PROTO} NÃO encontrado após sincronização."
           fi
-
+          
       # ────────────────────────────────────────────────────────
       # 4. ATUALIZAR ProtocolHelper.cpp
       # ────────────────────────────────────────────────────────

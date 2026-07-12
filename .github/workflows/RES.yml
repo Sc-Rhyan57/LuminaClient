@@ -26,13 +26,22 @@ jobs:
           fetch-depth: 0
 
       # ────────────────────────────────────────────────
-      # 2. Baixar o ORIGINAL limpo (TheProjectLumina)
+      # 2. Baixar o ORIGINAL (COM A FLAG --recursive)
       # ────────────────────────────────────────────────
       - name: 🚚 Baixar repositório original
         run: |
           echo "=== Baixando TheProjectLumina/LuminaClient original... ==="
-          git clone --depth 1 https://github.com/TheProjectLumina/LuminaClient.git /tmp/original-lumina
-          echo "✅ Download do original concluído!"
+          # O --recursive É O SEGREDO! Sem ele, submódulos ficam vazios.
+          git clone --depth 1 --recursive https://github.com/TheProjectLumina/LuminaClient.git /tmp/original-lumina
+          
+          # Verificação de sanidade (trava antes de apagar sua main se der erro)
+          FILE_COUNT=$(find /tmp/original-lumina/Protocol -type f | wc -l)
+          echo "✅ Download concluído. Arquivos em Protocol/: $FILE_COUNT"
+          
+          if [ "$FILE_COUNT" -eq 0 ]; then
+            echo "❌ ERRO GRAVE: A pasta Protocol/ ficou vazia mesmo com --recursive. Abortando para não quebrar a main."
+            exit 1
+          fi
 
       # ────────────────────────────────────────────────
       # 3. Apagar as pastas quebradas do seu repo
@@ -73,16 +82,12 @@ jobs:
           
           git add Protocol/ Lunaris/
           
-          # Verifica se realmente mudou algo
           if git diff --cached --quiet; then
             echo "⚠️ Nenhuma mudança detectada, as pastas já eram iguais ao original."
             exit 0
           fi
           
-          # Faz o commit com a SUA mensagem
           git commit -m "${{ inputs.commit_message }}"
-          
-          # Manda direto pra main
           git push origin main
           
           echo "✅ RESGATE CONCLUÍDO! A main foi restaurada com sucesso!"

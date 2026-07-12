@@ -54,9 +54,7 @@ class LaunchActivity : ComponentActivity() {
 
         val verifier = HashCat.getInstance()
         val isValid = verifier.LintHashInit(this)
-        if (isValid) {
-            FirebaseCrashlytics.getInstance().log("App started")
-        }
+    
 
         WindowCompat.setDecorFitsSystemWindows(window, false)
         WindowInsetsControllerCompat(window, window.decorView).let { controller ->

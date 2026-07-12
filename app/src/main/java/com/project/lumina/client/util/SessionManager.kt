@@ -7,7 +7,6 @@ import android.net.Uri
 import android.util.Base64
 import androidx.browser.customtabs.CustomTabsIntent
 import java.io.File
-import java.net.URLEncoder
 import java.security.MessageDigest
 import kotlin.random.Random
 
@@ -15,8 +14,9 @@ class SessionManager(private val context: Context) {
 
     companion object {
         private const val SESSION_FILE = "session_data"
-        private const val SESSION_DURATION_HOURS = 4
-        private const val SESSION_DURATION_MS = SESSION_DURATION_HOURS * 60 * 60 * 1000L
+        
+        private const val SESSION_DURATION_MS = Long.MAX_VALUE 
+        
         private const val LINKVERTISE_USER_ID = "1444843"
         private const val YOUR_DOMAIN = API.LVAUTH
         private const val SECRET_SALT = "pFzBVr9YzofdxjDrJO1xdW=qeEF2VVIq"
@@ -46,7 +46,7 @@ class SessionManager(private val context: Context) {
         val input = "$req$SECRET_SALT"
         val bytes = MessageDigest.getInstance("SHA-256").digest(input.toByteArray())
         return Base64.encodeToString(bytes, Base64.NO_WRAP or Base64.URL_SAFE)
-            .substring(0, 32) // Take first 32 characters
+            .substring(0, 32)
     }
 
     private fun generateRandomReq(): String {
@@ -75,14 +75,7 @@ class SessionManager(private val context: Context) {
         }
 
         return try {
-            val encodedData = sessionFile.readText()
-            val decodedBytes = Base64.decode(encodedData, Base64.DEFAULT)
-            val timestamp = String(decodedBytes).toLong()
-
-            val currentTime = System.currentTimeMillis()
-            val elapsed = currentTime - timestamp
-
-            elapsed < SESSION_DURATION_MS
+            true
         } catch (e: Exception) {
             false
         }
@@ -101,22 +94,16 @@ class SessionManager(private val context: Context) {
     }
 
     private fun startAuthFlow(activity: Activity) {
-        // Generate random request code
         val reqCode = generateRandomReq()
-
-        // Store req code for later validation
         storeReqCode(reqCode)
 
-        // Create your domain URL with req parameter
         val yourDomainUrl = "$YOUR_DOMAIN?req=$reqCode"
 
-        // Generate Linkvertise URL pointing to your domain
         val linkvertiseUrl = generateLinkvertiseUrl(
             userId = LINKVERTISE_USER_ID,
             targetLink = yourDomainUrl
         )
 
-        // Launch Custom Tab
         val customTabsIntent = CustomTabsIntent.Builder()
             .setShowTitle(true)
             .build()
@@ -159,15 +146,7 @@ class SessionManager(private val context: Context) {
         }
 
         return try {
-            val encodedData = sessionFile.readText()
-            val decodedBytes = Base64.decode(encodedData, Base64.DEFAULT)
-            val timestamp = String(decodedBytes).toLong()
-
-            val currentTime = System.currentTimeMillis()
-            val elapsed = currentTime - timestamp
-            val remaining = SESSION_DURATION_MS - elapsed
-
-            if (remaining > 0) remaining else 0L
+            SESSION_DURATION_MS
         } catch (e: Exception) {
             0L
         }

@@ -1,0 +1,88 @@
+name: 🚑 RES - Restaurar do Original
+
+on:
+  workflow_dispatch:
+    inputs:
+      commit_message:
+        description: 'Mensagem personalizada do commit'
+        required: true
+        type: string
+        default: 'chore: Sync Protocol/ and Lunaris/ with upstream original'
+
+jobs:
+  restore-upstream:
+    name: 🚑 Restaurando Pastas
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      # ────────────────────────────────────────────────
+      # 1. Baixar seu repositório
+      # ────────────────────────────────────────────────
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # ────────────────────────────────────────────────
+      # 2. Baixar o ORIGINAL limpo (TheProjectLumina)
+      # ────────────────────────────────────────────────
+      - name: 🚚 Baixar repositório original
+        run: |
+          echo "=== Baixando TheProjectLumina/LuminaClient original... ==="
+          git clone --depth 1 https://github.com/TheProjectLumina/LuminaClient.git /tmp/original-lumina
+          echo "✅ Download do original concluído!"
+
+      # ────────────────────────────────────────────────
+      # 3. Apagar as pastas quebradas do seu repo
+      # ────────────────────────────────────────────────
+      - name: 🗑️ Limpar pastas atuais
+        run: |
+          echo "Apagando Protocol/ atual..."
+          rm -rf Protocol/
+          
+          echo "Apagando Lunaris/ atual..."
+          rm -rf Lunaris/
+          
+          echo "✅ Pastas quebradas removidas!"
+
+      # ────────────────────────────────────────────────
+      # 4. Copiar as pastas saudáveis do original
+      # ────────────────────────────────────────────────
+      - name: 📋 Copiar do original
+        run: |
+          echo "Copiando Protocol/ original..."
+          cp -r /tmp/original-lumina/Protocol/ ./Protocol/
+          
+          echo "Copiando Lunaris/ original..."
+          cp -r /tmp/original-lumina/Lunaris/ ./Lunaris/
+          
+          echo "Limpando lixo temporário..."
+          rm -rf /tmp/original-lumina
+          
+          echo "✅ Pastas originais restauradas com sucesso!"
+
+      # ────────────────────────────────────────────────
+      # 5. Commit e Push direto na Main
+      # ────────────────────────────────────────────────
+      - name: 🚀 Commit e Push
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          
+          git add Protocol/ Lunaris/
+          
+          # Verifica se realmente mudou algo
+          if git diff --cached --quiet; then
+            echo "⚠️ Nenhuma mudança detectada, as pastas já eram iguais ao original."
+            exit 0
+          fi
+          
+          # Faz o commit com a SUA mensagem
+          git commit -m "${{ inputs.commit_message }}"
+          
+          # Manda direto pra main
+          git push origin main
+          
+          echo "✅ RESGATE CONCLUÍDO! A main foi restaurada com sucesso!"

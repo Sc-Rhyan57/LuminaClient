@@ -42,25 +42,20 @@ jobs:
           echo "=== Últimas entradas da tabela ==="
           grep -n 'cloudburstmc/protocol/bedrock/codec' "$FILE" | tail -10
 
-          # Protocolo mais alto no fallback (linha do defaultCodecClass, FORA da tabela)
           FALLBACK_PROTO=$(grep -oP 'bedrock/codec/v\K[0-9]+(?=/Bedrock_v[0-9]+")' "$FILE" | sort -n | tail -1)
           echo "fallback_proto=$FALLBACK_PROTO" >> $GITHUB_OUTPUT
           echo "Fallback atual: v${FALLBACK_PROTO}"
 
-          # Maior protocolo dentro da tabela (vetor protocols[])
-          # Padrão exato do arquivo: {1001, "org/... ou { 1001, "org/...
           LAST_TABLE_PROTO=$(grep -oP '^\s*\{\s*\K[0-9]+(?=\s*,\s*"org/cloudburstmc/protocol/bedrock/codec)' "$FILE" | sort -n | tail -1)
           echo "last_table_proto=$LAST_TABLE_PROTO" >> $GITHUB_OUTPUT
           echo "Maior protocolo na tabela: v${LAST_TABLE_PROTO}"
 
-          # Linha dessa última entrada
           if [ -n "$LAST_TABLE_PROTO" ]; then
             LAST_TABLE_LINE=$(grep -nP "^\s*\{\s*${LAST_TABLE_PROTO}\s*," "$FILE" | grep 'cloudburstmc' | tail -1 | cut -d: -f1)
             echo "last_table_line=$LAST_TABLE_LINE" >> $GITHUB_OUTPUT
             echo "Linha da última entrada: ${LAST_TABLE_LINE}"
           fi
 
-          # Verifica se o novo protocolo JÁ existe na tabela
           if grep -qP "^\s*\{\s*${NEW_PROTO}\s*," "$FILE"; then
             echo "proto_already_in_table=true" >> $GITHUB_OUTPUT
             echo "⚠️  v${NEW_PROTO} já existe na tabela — não será duplicado."
@@ -77,20 +72,16 @@ jobs:
           echo "=== Conteúdo relevante do Lunaris.cpp ==="
           grep -n 'setVersion\|setProtocolVersion\|CallObjectMethod.*version\|CallObjectMethod.*proto' "$FILE"
 
-          # ── version string: captura o argumento de createJavaString passado ao setVersion ──
-          # Padrão exato: env->CallObjectMethod(pongObj, setVersion, createJavaString(env, "26.33"));
           CURRENT_MC=$(grep -oP 'CallObjectMethod\s*\([^,]+,\s*setVersion\s*,\s*createJavaString\s*\(\s*env\s*,\s*"\K[^"]+(?=")' "$FILE" | head -1)
           echo "current_mc=$CURRENT_MC" >> $GITHUB_OUTPUT
           echo "Versão MC atual: '${CURRENT_MC}'"
 
-          # ── protocolVersion: captura o inteiro literal passado ao setProtocolVersion ──
-          # Padrão exato: env->CallObjectMethod(pongObj, setProtocolVersion, 898);
           CURRENT_PROTO=$(grep -oP 'CallObjectMethod\s*\([^,]+,\s*setProtocolVersion\s*,\s*\K[0-9]+(?=\s*\))' "$FILE" | head -1)
           echo "current_proto=$CURRENT_PROTO" >> $GITHUB_OUTPUT
           echo "Protocolo atual: '${CURRENT_PROTO}'"
 
       # ────────────────────────────────────────────────────────
-      # 3. SINCRONIZAR OS CODECS SEM APAGAR NADA
+      # 3. SINCRONIZAR OS CODECS + PASTA data/ SEM APAGAR NADA
       # ────────────────────────────────────────────────────────
       - name: "🔄 Sincronizar Codecs (CloudburstMC branch 3.0)"
         id: update_protocol
@@ -102,13 +93,9 @@ jobs:
           LOCAL_CODEC_BASE="${WORKSPACE}/Protocol/bedrock-codec/src/main/java/org/cloudburstmc/protocol/bedrock/codec"
           CODEC_DIR="${LOCAL_CODEC_BASE}/v${NEW_PROTO}"
 
-          # Garante que a pasta de destino existe — SEM apagar nada existente
           mkdir -p "${LOCAL_CODEC_BASE}"
-
-          # Limpa apenas a pasta temporária
           rm -rf /tmp/protocol-upstream
 
-          # Clone esparso: apenas bedrock-codec
           git clone --depth 1 --branch 3.0 --filter=blob:none --sparse \
             "${UPSTREAM}" /tmp/protocol-upstream
           cd /tmp/protocol-upstream
@@ -117,7 +104,6 @@ jobs:
           UPSTREAM_CODEC="/tmp/protocol-upstream/bedrock-codec/src/main/java/org/cloudburstmc/protocol/bedrock/codec"
           ADDED_COUNT=0
 
-          # Copia apenas as pastas v* que ainda não existem localmente
           for dir in "${UPSTREAM_CODEC}"/v*; do
             if [ -d "$dir" ]; then
               CODEC_NAME=$(basename "$dir")
@@ -130,6 +116,19 @@ jobs:
               fi
             fi
           done
+
+          # ── Sincroniza também a pasta data/ ──
+          DATA_SRC="${UPSTREAM_CODEC}/../data"
+          DATA_DST="${LOCAL_CODEC_BASE}/../data"
+          if [ -d "$DATA_SRC" ]; then
+            echo "🔄 Sincronizando pasta data/..."
+            mkdir -p "$DATA_DST"
+            cp -rn "$DATA_SRC/." "$DATA_DST/"
+            DATA_COUNT=$(find "$DATA_DST" -name '*.java' | wc -l)
+            echo "✅ pasta data/ sincronizada (${DATA_COUNT} arquivos .java)."
+          else
+            echo "⚠️  pasta data/ não encontrada no upstream."
+          fi
 
           rm -rf /tmp/protocol-upstream
           cd "${WORKSPACE}"
@@ -155,18 +154,11 @@ jobs:
           LAST_TABLE_LINE="${{ steps.detect_protocol.outputs.last_table_line }}"
           ALREADY_IN_TABLE="${{ steps.detect_protocol.outputs.proto_already_in_table }}"
 
-          # ── 4a. Inserir nova entrada na tabela (somente se ainda não existe) ──
           if [ "$ALREADY_IN_TABLE" = "false" ]; then
             if [ -n "$LAST_TABLE_LINE" ]; then
-              # Garante vírgula no final da última entrada existente
               sed -i "${LAST_TABLE_LINE}s/}[[:space:]]*$/},/" "$FILE"
-
-              # Detecta indentação da linha anterior para manter consistência
               INDENT=$(sed -n "${LAST_TABLE_LINE}p" "$FILE" | grep -oP '^\s+')
-
-              # Monta a nova linha no formato exato do arquivo
               NEW_ENTRY="${INDENT}{ ${NEW_PROTO}, \"org/cloudburstmc/protocol/bedrock/codec/v${NEW_PROTO}/Bedrock_v${NEW_PROTO}\" },"
-
               sed -i "${LAST_TABLE_LINE}a\\${NEW_ENTRY}" "$FILE"
               echo "✅ Entrada v${NEW_PROTO} adicionada à tabela."
             else
@@ -177,7 +169,6 @@ jobs:
             echo "⏭️  v${NEW_PROTO} já existe na tabela — nenhuma inserção feita."
           fi
 
-          # ── 4b. Atualizar o codec de fallback (defaultCodecClass) ──
           if [ -n "$FALLBACK" ] && [ "$FALLBACK" != "$NEW_PROTO" ]; then
             sed -i \
               "s|/codec/v${FALLBACK}/Bedrock_v${FALLBACK}\"|/codec/v${NEW_PROTO}/Bedrock_v${NEW_PROTO}\"|g" \
@@ -203,30 +194,20 @@ jobs:
 
           echo "Substituindo: MC '${OLD_MC}' → '${NEW_MC}' | Proto '${OLD_PROTO}' → '${NEW_PROTO}'"
 
-          # ── 5a. Atualizar version string dentro de createJavaString passado ao setVersion ──
-          # Substitui APENAS a string exata dentro do CallObjectMethod do setVersion,
-          # sem tocar em outras strings que possam conter sequências parecidas.
           if [ -n "$OLD_MC" ] && [ "$OLD_MC" != "$NEW_MC" ]; then
-            # Substitui "26.33" → "26.40" na linha que contém setVersion
             sed -i "/setVersion/s|createJavaString(env, \"${OLD_MC}\")|createJavaString(env, \"${NEW_MC}\")|g" "$FILE"
             echo "✅ Version string atualizada: ${OLD_MC} → ${NEW_MC}"
           else
             echo "⚠️  Version string não detectada ou já atualizada — fazendo substituição direta."
-            # Fallback: substitui a string de versão na linha do setVersion diretamente
             sed -i "/setVersion/s|createJavaString(env, \"[^\"]*\")|createJavaString(env, \"${NEW_MC}\")|g" "$FILE"
             echo "✅ Version string substituída por fallback: → ${NEW_MC}"
           fi
 
-          # ── 5b. Atualizar protocolVersion no CallObjectMethod do setProtocolVersion ──
-          # Substitui APENAS o inteiro literal na chamada do setProtocolVersion,
-          # sem tocar no número do comentário do topo (ex: "Project Lumina 1001").
           if [ -n "$OLD_PROTO" ] && [ "$OLD_PROTO" != "$NEW_PROTO" ]; then
-            # Substitui só na linha que contém setProtocolVersion
             sed -i "/setProtocolVersion/s|, ${OLD_PROTO});|, ${NEW_PROTO});|g" "$FILE"
             echo "✅ ProtocolVersion atualizado: ${OLD_PROTO} → ${NEW_PROTO}"
           else
             echo "⚠️  ProtocolVersion não detectado ou já atualizado — fazendo substituição direta."
-            # Fallback: substitui o número na linha do setProtocolVersion diretamente
             sed -i "/setProtocolVersion/s|, [0-9]\+);|, ${NEW_PROTO});|g" "$FILE"
             echo "✅ ProtocolVersion substituído por fallback: → ${NEW_PROTO}"
           fi
@@ -251,7 +232,6 @@ jobs:
           echo "=== patchCodecIfNeeded atual ==="
           grep -n 'patchCodec\|protocolVersion\s*>\|v[0-9]\{3,4\}' "$LISTENER" | head -20
 
-          # Só atualiza se houver hardcode do protocolo antigo (ex: "if (version > 898)")
           if [ -n "$OLD_PROTO" ] && [ "$OLD_PROTO" != "$NEW_PROTO" ]; then
             if grep -qP "\b${OLD_PROTO}\b" "$LISTENER"; then
               sed -i "s/\b${OLD_PROTO}\b/${NEW_PROTO}/g" "$LISTENER"
@@ -273,7 +253,6 @@ jobs:
           ERRORS=0
 
           echo "=== ProtocolHelper.cpp ==="
-
           if grep -qP "^\s*\{\s*${NEW_PROTO}\s*," Lunaris/src/main/cpp/ProtocolHelper.cpp; then
             echo "✅ v${NEW_PROTO} encontrado na tabela."
           else
@@ -298,8 +277,6 @@ jobs:
 
           echo ""
           echo "=== Lunaris.cpp ==="
-
-          # Valida version string na linha do setVersion
           if grep -q "setVersion" Lunaris/src/main/cpp/Lunaris.cpp && \
              grep "setVersion" Lunaris/src/main/cpp/Lunaris.cpp | grep -q "\"${NEW_MC}\""; then
             echo "✅ Version string '${NEW_MC}' encontrada no setVersion."
@@ -308,7 +285,6 @@ jobs:
             ERRORS=$((ERRORS + 1))
           fi
 
-          # Valida protocolVersion na linha do setProtocolVersion
           if grep -q "setProtocolVersion" Lunaris/src/main/cpp/Lunaris.cpp && \
              grep "setProtocolVersion" Lunaris/src/main/cpp/Lunaris.cpp | grep -qP "\b${NEW_PROTO}\b"; then
             echo "✅ ProtocolVersion ${NEW_PROTO} encontrado no setProtocolVersion."
@@ -325,6 +301,15 @@ jobs:
           else
             echo "❌ Pasta do codec v${NEW_PROTO} NÃO existe!"
             ERRORS=$((ERRORS + 1))
+          fi
+
+          echo ""
+          echo "=== Pasta data/ ==="
+          DATA_PATH="Protocol/bedrock-codec/src/main/java/org/cloudburstmc/protocol/bedrock/data"
+          if [ -d "$DATA_PATH" ]; then
+            echo "✅ Pasta data/ existe ($(find "$DATA_PATH" -name '*.java' | wc -l) arquivos .java)."
+          else
+            echo "⚠️  Pasta data/ não existe localmente (pode não ser necessária para esta versão)."
           fi
 
           echo ""
@@ -392,7 +377,8 @@ jobs:
               "### Arquivos alterados:",
               `- \`Lunaris/src/main/cpp/ProtocolHelper.cpp\` — nova entrada v${newProto} + fallback`,
               `- \`Lunaris/src/main/cpp/Lunaris.cpp\` — version string (${newMC}) + protocolVersion (${newProto})`,
-              `- \`Protocol/bedrock-codec/v${newProto}/\` — codec sincronizado`,
+              `- \`Protocol/bedrock-codec/.../codec/v${newProto}/\` — codec sincronizado`,
+              `- \`Protocol/bedrock-codec/.../data/\` — classes de dados sincronizadas (no-clobber)`,
               `- \`AutoCodecPacketListener.kt\` — verificado`,
               "",
               "### Checklist:",

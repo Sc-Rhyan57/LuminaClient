@@ -80,6 +80,9 @@ jobs:
           LOCAL_CODEC_BASE="Protocol/bedrock-codec/src/main/java/org/cloudburstmc/protocol/bedrock/codec"
           CODEC_DIR="${LOCAL_CODEC_BASE}/v${NEW_PROTO}"
 
+          # GARANTE QUE O DIRETÓRIO EXISTE (Resolve erro de pasta vazia)
+          mkdir -p "${LOCAL_CODEC_BASE}"
+
           # Clone invisível (Sparse Checkout) pegando SÓ a pasta de codecs
           echo "=== Fazendo sparse clone dos codecs do upstream... ==="
           git clone --depth 1 --branch 3.0 --filter=blob:none --sparse "${UPSTREAM}" /tmp/protocol-upstream
@@ -117,7 +120,7 @@ jobs:
             echo "codec_exists=false" >> $GITHUB_OUTPUT
             echo "❌ Codec v${NEW_PROTO} NÃO existe no upstream."
           fi
-
+          
       # ────────────────────────────────────────────────────────
       # 4. VERIFICAR SE PRECISA ATUALIZAR O C++
       # ────────────────────────────────────────────────────────

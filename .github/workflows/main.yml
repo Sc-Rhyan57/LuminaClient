@@ -72,63 +72,58 @@ jobs:
       # ────────────────────────────────────────────────────────
       # 3. SINCRONIZAR APENAS OS CODECS (SEGURANÇA MÁXIMA)
       # ────────────────────────────────────────────────────────
-      - name: "🔄 Sincronizar APENAS os Codecs (CloudburstMC branch 3.0)"
-        id: update_protocol
-        run: |
-          NEW_PROTO="${{ inputs.protocol_version }}"
-          UPSTREAM="https://github.com/CloudburstMC/Protocol.git"
-          
-          # Caminhos ABSOLUTOS (nunca mais perde a referência com o cd)
-          WORKSPACE="${GITHUB_WORKSPACE}"
-          LOCAL_CODEC_BASE="${WORKSPACE}/Protocol/bedrock-codec/src/main/java/org/cloudburstmc/protocol/bedrock/codec"
-          CODEC_DIR="${LOCAL_CODEC_BASE}/v${NEW_PROTO}"
+  - name: "🔄 Sincronizar APENAS os Codecs (CloudburstMC branch 3.0)"
+  id: update_protocol
+  run: |
+    NEW_PROTO="${{ inputs.protocol_version }}"
+    UPSTREAM="https://github.com/CloudburstMC/Protocol.git"
+    
+    WORKSPACE="${GITHUB_WORKSPACE}"
+    LOCAL_CODEC_BASE="${WORKSPACE}/Protocol/bedrock-codec/src/main/java/org/cloudburstmc/protocol/bedrock/codec"
+    CODEC_DIR="${LOCAL_CODEC_BASE}/v${NEW_PROTO}"
 
-          # 1. Limpa qualquer coisa que esteja travando o caminho
-          if [ -e "${WORKSPACE}/Protocol" ]; then
-            rm -rf "${WORKSPACE}/Protocol"
-          fi
-          
-          # 2. Garante que a pasta existe no seu repositório
-          mkdir -p "${LOCAL_CODEC_BASE}"
+    # ✅ CORREÇÃO: só garante que a pasta de destino existe, sem apagar nada
+    mkdir -p "${LOCAL_CODEC_BASE}"
 
-          # 3. Baixa SOMENTE o bedrock-codec do CloudburstMC
-          git clone --depth 1 --branch 3.0 --filter=blob:none --sparse "${UPSTREAM}" /tmp/protocol-upstream
-          cd /tmp/protocol-upstream
-          git sparse-checkout set bedrock-codec
-          
-          UPSTREAM_CODEC="/tmp/protocol-upstream/bedrock-codec/src/main/java/org/cloudburstmc/protocol/bedrock/codec"
-          ADDED_COUNT=0
+    # Baixa SOMENTE o bedrock-codec do CloudburstMC em pasta temporária
+    rm -rf /tmp/protocol-upstream
+    git clone --depth 1 --branch 3.0 --filter=blob:none --sparse "${UPSTREAM}" /tmp/protocol-upstream
+    cd /tmp/protocol-upstream
+    git sparse-checkout set bedrock-codec
+    
+    UPSTREAM_CODEC="/tmp/protocol-upstream/bedrock-codec/src/main/java/org/cloudburstmc/protocol/bedrock/codec"
+    ADDED_COUNT=0
 
-          # 4. Copia SOMENTE as pastas v* que faltam
-          for dir in "${UPSTREAM_CODEC}"/v*; do
-            if [ -d "$dir" ]; then
-              CODEC_NAME=$(basename "$dir")
-              if [ ! -d "${LOCAL_CODEC_BASE}/${CODEC_NAME}" ]; then
-                cp -r "$dir" "${LOCAL_CODEC_BASE}/${CODEC_NAME}"
-                echo "  ✅ Novo codec adicionado: v${CODEC_NAME}"
-                ADDED_COUNT=$((ADDED_COUNT + 1))
-              fi
-            fi
-          done
-          
-          # 5. Limpa lixo e volta pro workspace
-          rm -rf /tmp/protocol-upstream
-          cd "${WORKSPACE}"
-          
-          if [ $ADDED_COUNT -gt 0 ]; then
-            echo "✅ ${ADDED_COUNT} codecs novos adicionados com sucesso!"
-          else
-            echo "ℹ️  Nenhum codec faltante encontrado."
-          fi
-          
-          # 6. Verifica se o codec pedido existe
-          if [ -d "$CODEC_DIR" ]; then
-            echo "codec_exists=true" >> $GITHUB_OUTPUT
-            echo "✅ Codec v${NEW_PROTO} está disponível."
-          else
-            echo "codec_exists=false" >> $GITHUB_OUTPUT
-            echo "❌ Codec v${NEW_PROTO} NÃO existe no upstream."
-          fi
+    # Copia SOMENTE as pastas v* que faltam
+    for dir in "${UPSTREAM_CODEC}"/v*; do
+      if [ -d "$dir" ]; then
+        CODEC_NAME=$(basename "$dir")
+        if [ ! -d "${LOCAL_CODEC_BASE}/${CODEC_NAME}" ]; then
+          cp -r "$dir" "${LOCAL_CODEC_BASE}/${CODEC_NAME}"
+          echo "  ✅ Novo codec adicionado: ${CODEC_NAME}"
+          ADDED_COUNT=$((ADDED_COUNT + 1))
+        fi
+      fi
+    done
+    
+    # Limpa temporário e volta pro workspace
+    rm -rf /tmp/protocol-upstream
+    cd "${WORKSPACE}"
+    
+    if [ $ADDED_COUNT -gt 0 ]; then
+      echo "✅ ${ADDED_COUNT} codecs novos adicionados com sucesso!"
+    else
+      echo "ℹ️  Nenhum codec faltante encontrado."
+    fi
+    
+    # Verifica se o codec pedido existe
+    if [ -d "$CODEC_DIR" ]; then
+      echo "codec_exists=true" >> $GITHUB_OUTPUT
+      echo "✅ Codec v${NEW_PROTO} está disponível."
+    else
+      echo "codec_exists=false" >> $GITHUB_OUTPUT
+      echo "❌ Codec v${NEW_PROTO} NÃO existe no upstream."
+    fi
           
       # ────────────────────────────────────────────────────────
       # 4. VERIFICAR SE PRECISA ATUALIZAR O C++

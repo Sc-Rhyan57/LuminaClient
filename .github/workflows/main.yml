@@ -117,74 +117,51 @@ jobs:
           grep -n '[0-9]\{3,4\}\|version\|Version\|protocol\|MCPE' "$FILE" | head -40
 
       # ────────────────────────────────────────────────────────
-      # 5. ATUALIZAR Protocol/ A PARTIR DO UPSTREAM
+      # 5. SINCRONIZAR APENAS OS CODECS DO UPSTREAM
       # ────────────────────────────────────────────────────────
-      - name: "🔄 Atualizar Protocol/ (CloudburstMC/Protocol branch 3.0)"
+      - name: "🔄 Sincronizar Codecs do Protocol (CloudburstMC/Protocol branch 3.0)"
         id: update_protocol
         run: |
           NEW_PROTO="${{ inputs.protocol_version }}"
           UPSTREAM="https://github.com/CloudburstMC/Protocol.git"
-          CODEC_DIR="Protocol/bedrock-codec/src/main/java/org/cloudburstmc/protocol/bedrock/codec/v${NEW_PROTO}"
-          CODEC_BASE="Protocol/bedrock-codec/src/main/java/org/cloudburstmc/protocol/bedrock/codec"
-
-          # ── 1. Salvar os build.gradle.kts EXISTENTES ──
-          BACKUP_DIR="/tmp/protocol-gradle-backup"
-          rm -rf "$BACKUP_DIR"
-          mkdir -p "$BACKUP_DIR"
-
-          echo "=== Fazendo backup dos build.gradle.kts existentes... ==="
+          LOCAL_CODEC_BASE="Protocol/bedrock-codec/src/main/java/org/cloudburstmc/protocol/bedrock/codec"
           
-          # Inicializa o submodule se a pasta estiver vazia
-          if [ -f ".gitmodules" ]; then
-            git submodule update --init Protocol
+          # ── 1. Sparse Clone (Baixa SOMENTE a pasta de codecs do upstream) ──
+          echo "=== Fazendo sparse clone dos codecs do upstream... ==="
+          git clone --depth 1 --branch 3.0 --filter=blob:none --sparse "${UPSTREAM}" /tmp/protocol-upstream
+          cd /tmp/protocol-upstream
+          git sparse-checkout set bedrock-codec/src/main/java/org/cloudburstmc/protocol/bedrock/codec
+          
+          UPSTREAM_CODEC_BASE="/tmp/protocol-upstream/bedrock-codec/src/main/java/org/cloudburstmc/protocol/bedrock/codec"
+          
+          ADDED_COUNT=0
+          ADDED_LIST=""
+          
+          # ── 2. Copiar SOMENTE os codecs que não existem localmente ──
+          echo "=== Sincronizando codecs faltantes... ==="
+          for dir in "${UPSTREAM_CODEC_BASE}"/v*; do
+            CODEC_NAME=$(basename "$dir")
+            if [ ! -d "${LOCAL_CODEC_BASE}/${CODEC_NAME}" ]; then
+              cp -r "$dir" "${LOCAL_CODEC_BASE}/"
+              ADDED_LIST="${ADDED_LIST}\n  ✅ ${CODEC_NAME}"
+              ADDED_COUNT=$((ADDED_COUNT + 1))
+            fi
+          done
+          
+          # Limpar arquivo temporário
+          rm -rf /tmp/protocol-upstream
+          cd $GITHUB_WORKSPACE
+          
+          echo ""
+          if [ $ADDED_COUNT -gt 0 ]; then
+            echo -e "✅ ${ADDED_COUNT} novos codecs adicionados:${ADDED_LIST}"
+          else
+            echo "ℹ️  Nenhum codec faltante encontrado, tudo já está atualizado."
           fi
-
-          find Protocol/ -name "build.gradle.kts" | while read f; do
-            REL="${f#Protocol/}"
-            DEST="$BACKUP_DIR/$(dirname "$REL")"
-            mkdir -p "$DEST"
-            cp "$f" "$DEST/"
-            echo "  ✅ Backup salvo: $REL"
-          done
-
-          # ── 2. Apagar tudo e clonar do zero ──
+          
+          # ── 3. Verificar se o codec específico pedido existe ──
+          CODEC_DIR="${LOCAL_CODEC_BASE}/v${NEW_PROTO}"
           echo ""
-          echo "=== Removendo Protocol/ atual... ==="
-          rm -rf Protocol
-
-          echo "=== Clonando ${UPSTREAM} (branch 3.0, shallow) ... ==="
-          git clone --depth 1 --branch 3.0 "${UPSTREAM}" Protocol
-          rm -rf Protocol/.git
-
-          # ── 3. Remover arquivos que não precisam ──
-          echo ""
-          echo "=== Limpando arquivos desnecessários... ==="
-          rm -f  Protocol/README.md
-          rm -f  Protocol/settings.gradle.kts
-          rm -f  Protocol/gradlew
-          rm -f  Protocol/gradlew.bat
-          rm -rf Protocol/gradle
-          rm -rf Protocol/.github
-          find Protocol/ -name "build.gradle.kts" -delete
-
-          # ── 4. Restaurar os build.gradle.kts ORIGINAIS ──
-          echo ""
-          echo "=== Restaurando build.gradle.kts originais... ==="
-          find "$BACKUP_DIR" -name "build.gradle.kts" | while read f; do
-            REL="${f#$BACKUP_DIR/}"
-            DEST_DIR="Protocol/$(dirname "$REL")"
-            # Cria o diretório de destino antes de copiar (corrige o erro)
-            mkdir -p "$DEST_DIR"
-            cp "$f" "Protocol/$REL"
-            echo "  ✅ Restaurado: $REL"
-          done
-          rm -rf "$BACKUP_DIR"
-
-          echo ""
-          echo "✅ Protocol atualizado e limpo com sucesso"
-          echo ""
-
-          # ── Verificar codec v{NEW_PROTO} ──
           echo "=== Verificando codec v${NEW_PROTO} ==="
           if [ -d "$CODEC_DIR" ]; then
             FILE_COUNT=$(find "$CODEC_DIR" -type f | wc -l)
@@ -196,9 +173,10 @@ jobs:
             echo "❌ Codec v${NEW_PROTO} NÃO encontrado no upstream"
           fi
 
+          # ── 4. Listar TODOS os codecs disponíveis ──
           echo ""
-          echo "=== Todos os codecs disponíveis agora ==="
-          ls -d "${CODEC_BASE}"/v* 2>/dev/null \
+          echo "=== Todos os codecs disponíveis no projeto agora ==="
+          ls -d "${LOCAL_CODEC_BASE}"/v* 2>/dev/null \
             | xargs -I{} basename {} \
             | sort -V \
             | sed 's|^|   |'

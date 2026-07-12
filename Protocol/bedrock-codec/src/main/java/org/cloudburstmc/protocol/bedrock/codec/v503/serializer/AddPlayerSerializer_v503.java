@@ -4,7 +4,6 @@ import io.netty.buffer.ByteBuf;
 import org.cloudburstmc.protocol.bedrock.codec.BedrockCodecHelper;
 import org.cloudburstmc.protocol.bedrock.codec.v291.serializer.AdventureSettingsSerializer_v291;
 import org.cloudburstmc.protocol.bedrock.codec.v388.serializer.AddPlayerSerializer_v388;
-import org.cloudburstmc.protocol.bedrock.data.BuildPlatform;
 import org.cloudburstmc.protocol.bedrock.data.GameType;
 import org.cloudburstmc.protocol.bedrock.packet.AddPlayerPacket;
 import org.cloudburstmc.protocol.common.util.VarInts;
@@ -29,7 +28,7 @@ public class AddPlayerSerializer_v503 extends AddPlayerSerializer_v388 {
         AdventureSettingsSerializer_v291.INSTANCE.serialize(buffer, helper, packet.getAdventureSettings());
         helper.writeArray(buffer, packet.getEntityLinks(), helper::writeEntityLink);
         helper.writeString(buffer, packet.getDeviceId());
-        buffer.writeIntLE(packet.getBuildPlatform().ordinal());
+        buffer.writeIntLE(packet.getBuildPlatform());
     }
 
     @Override
@@ -48,6 +47,6 @@ public class AddPlayerSerializer_v503 extends AddPlayerSerializer_v388 {
         AdventureSettingsSerializer_v291.INSTANCE.deserialize(buffer, helper, packet.getAdventureSettings());
         helper.readArray(buffer, packet.getEntityLinks(), helper::readEntityLink);
         packet.setDeviceId(helper.readString(buffer));
-        packet.setBuildPlatform(BuildPlatform.from(buffer.readIntLE()));
+        packet.setBuildPlatform(buffer.readIntLE());
     }
 }

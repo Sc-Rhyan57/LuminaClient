@@ -15,19 +15,19 @@ public class ServerboundDataStoreSerializer_v898 implements BedrockPacketSeriali
 
     @Override
     public void serialize(ByteBuf buffer, BedrockCodecHelper helper, ServerboundDataStorePacket packet) {
-        helper.writeString(buffer, packet.getUpdate().getDataStoreName());
-        helper.writeString(buffer, packet.getUpdate().getProperty());
-        helper.writeString(buffer, packet.getUpdate().getPath());
+        helper.writeString(buffer, packet.getDataStoreName());
+        helper.writeString(buffer, packet.getProperty());
+        helper.writeString(buffer, packet.getPath());
 
-        Object value = packet.getUpdate().getData();
+        Object value = packet.getData();
 
-        int type = value instanceof Number ? 0 : value instanceof Boolean ? 1 : value instanceof String ? 2 : -1;
+        int type = value instanceof Double ? 0 : value instanceof Boolean ? 1 : value instanceof String ? 2 : -1;
 
         VarInts.writeUnsignedInt(buffer, type);
 
         switch (type) {
             case 0:
-                buffer.writeDoubleLE(((Number) value).doubleValue());
+                buffer.writeDoubleLE((double) value);
                 break;
             case 1:
                 buffer.writeBoolean((boolean) value);
@@ -39,31 +39,32 @@ public class ServerboundDataStoreSerializer_v898 implements BedrockPacketSeriali
                 throw new IllegalStateException("Invalid data store data type");
         }
 
-        buffer.writeIntLE(packet.getUpdate().getUpdateCount());
+        buffer.writeIntLE(packet.getUpdateCount());
     }
 
     @Override
     public void deserialize(ByteBuf buffer, BedrockCodecHelper helper, ServerboundDataStorePacket packet) {
-        packet.getUpdate().setDataStoreName(helper.readString(buffer));
-        packet.getUpdate().setProperty(helper.readString(buffer));
-        packet.getUpdate().setPath(helper.readString(buffer));
+        packet.setDataStoreName(helper.readString(buffer));
+        packet.setProperty(helper.readString(buffer));
+        packet.setPath(helper.readString(buffer));
 
         int type = VarInts.readUnsignedInt(buffer);
 
         switch (type) {
             case 0:
-                packet.getUpdate().setData(buffer.readDoubleLE());
+                packet.setData(buffer.readDoubleLE());
                 break;
             case 1:
-                packet.getUpdate().setData(buffer.readBoolean());
+                packet.setData(buffer.readBoolean());
                 break;
             case 2:
-                packet.getUpdate().setData(helper.readString(buffer));
+                packet.setData(helper.readString(buffer));
                 break;
             default:
                 throw new IllegalStateException("Invalid data store data type: " + type);
         }
 
-        packet.getUpdate().setUpdateCount((int) buffer.readUnsignedIntLE());
+        packet.setUpdateCount((int) buffer.readUnsignedIntLE());
     }
 }
+

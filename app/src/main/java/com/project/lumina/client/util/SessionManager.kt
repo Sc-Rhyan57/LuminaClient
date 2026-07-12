@@ -15,6 +15,7 @@ class SessionManager(private val context: Context) {
     companion object {
         private const val SESSION_FILE = "session_data"
         
+        // Sessão infinita (292 Milhões de anos)
         private const val SESSION_DURATION_MS = Long.MAX_VALUE 
         
         private const val LINKVERTISE_USER_ID = "1444843"
@@ -27,8 +28,9 @@ class SessionManager(private val context: Context) {
             return true
         }
 
-        startAuthFlow(activity)
-        return false
+        // SE NÃO TIVER SESSÃO, CRIA UMA INFINITA LOCALMENTE E CONTINUA SEM ABRIR NADA
+        saveSession()
+        return true
     }
 
     fun validateAndSaveSession(key: String, req: String): Boolean {

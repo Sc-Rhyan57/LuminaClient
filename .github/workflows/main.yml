@@ -81,7 +81,7 @@ jobs:
           echo "Protocolo atual: '${CURRENT_PROTO}'"
 
       # ────────────────────────────────────────────────────────
-      # 3. SINCRONIZAR OS CODECS + PASTA data/ SEM APAGAR NADA
+      # 3. SINCRONIZAR OS CODECS + PASTAS data/ E packet/
       # ────────────────────────────────────────────────────────
       - name: "🔄 Sincronizar Codecs (CloudburstMC branch 3.0)"
         id: update_protocol
@@ -96,12 +96,14 @@ jobs:
           mkdir -p "${LOCAL_CODEC_BASE}"
           rm -rf /tmp/protocol-upstream
 
-          # Clone normal (sem filter=blob:none para garantir que todos os subdiretórios venham)
           git clone --depth 1 --branch 3.0 --sparse "${UPSTREAM}" /tmp/protocol-upstream
           cd /tmp/protocol-upstream
           git sparse-checkout set bedrock-codec
 
           UPSTREAM_CODEC="/tmp/protocol-upstream/bedrock-codec/src/main/java/org/cloudburstmc/protocol/bedrock/codec"
+          UPSTREAM_BASE="/tmp/protocol-upstream/bedrock-codec/src/main/java/org/cloudburstmc/protocol/bedrock"
+          LOCAL_BASE="${WORKSPACE}/Protocol/bedrock-codec/src/main/java/org/cloudburstmc/protocol/bedrock"
+          
           ADDED_COUNT=0
 
           # Copia apenas as pastas v* que ainda não existem localmente
@@ -118,24 +120,24 @@ jobs:
             fi
           done
 
-          # ── Sincroniza também a pasta data/ ──
-          DATA_SRC="/tmp/protocol-upstream/bedrock-codec/src/main/java/org/cloudburstmc/protocol/bedrock/data"
-          DATA_DST="${WORKSPACE}/Protocol/bedrock-codec/src/main/java/org/cloudburstmc/protocol/bedrock/data"
-          
+          # ── Sincroniza a pasta data/ ──
           echo "🔄 Sincronizando pasta data/..."
-          mkdir -p "$DATA_DST"
-          
-          if [ -d "$DATA_SRC" ]; then
-            # O rsync copia tudo, cria subpastas novas, e ignora arquivos que já existem localmente
-            rsync -a --ignore-existing "$DATA_SRC/" "$DATA_DST/"
-            
-            DATA_COUNT=$(find "$DATA_DST" -name '*.java' | wc -l)
-            echo "✅ pasta data/ sincronizada (${DATA_COUNT} arquivos .java no destino)."
-            echo "=== Subpastas em data/ ==="
-            ls -l "$DATA_DST"
+          mkdir -p "${LOCAL_BASE}/data"
+          if [ -d "${UPSTREAM_BASE}/data" ]; then
+            rsync -a --ignore-existing "${UPSTREAM_BASE}/data/" "${LOCAL_BASE}/data/"
+            echo "✅ pasta data/ sincronizada."
           else
-            echo "⚠️  pasta data/ não encontrada no upstream! Verificando o que foi baixado:"
-            ls -la /tmp/protocol-upstream/bedrock-codec/src/main/java/org/cloudburstmc/protocol/bedrock/
+            echo "⚠️  pasta data/ não encontrada no upstream."
+          fi
+
+          # ── Sincroniza a pasta packet/ ──
+          echo "🔄 Sincronizando pasta packet/..."
+          mkdir -p "${LOCAL_BASE}/packet"
+          if [ -d "${UPSTREAM_BASE}/packet" ]; then
+            rsync -a --ignore-existing "${UPSTREAM_BASE}/packet/" "${LOCAL_BASE}/packet/"
+            echo "✅ pasta packet/ sincronizada."
+          else
+            echo "⚠️  pasta packet/ não encontrada no upstream."
           fi
 
           # Agora limpa o temporário

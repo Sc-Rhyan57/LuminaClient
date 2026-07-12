@@ -7,13 +7,10 @@ import org.cloudburstmc.protocol.bedrock.codec.BedrockCodecHelper;
 import org.cloudburstmc.protocol.bedrock.codec.v685.serializer.TextSerializer_v685;
 import org.cloudburstmc.protocol.bedrock.packet.TextPacket;
 import org.cloudburstmc.protocol.common.util.TextConverter;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class TextSerializer_v898 extends TextSerializer_v685 {
 
     public static final TextSerializer_v898 INSTANCE = new TextSerializer_v898();
-    private static final Logger log = LoggerFactory.getLogger(TextSerializer_v898.class);
 
     @Override
     public void serialize(ByteBuf buffer, BedrockCodecHelper helper, TextPacket packet) {
@@ -23,7 +20,6 @@ public class TextSerializer_v898 extends TextSerializer_v685 {
         Boolean needsTranslation = converter.needsTranslation(message);
 
         buffer.writeBoolean(needsTranslation != null ? needsTranslation : packet.isNeedsTranslation());
-        String text;
 
         switch (type) {
             case RAW:
@@ -37,14 +33,7 @@ public class TextSerializer_v898 extends TextSerializer_v685 {
                 helper.writeString(buffer, "textObjectAnnouncement");
                 helper.writeString(buffer, "textObject");
                 buffer.writeByte(type.ordinal());
-                text = converter.serialize(message);
-                if (text.isEmpty()) {
-                    text = " ";
-                    if (log.isDebugEnabled()) {
-                        log.debug("TextPacket of " + type + " with empty message");
-                    }
-                }
-                helper.writeString(buffer, text);
+                helper.writeString(buffer, converter.serialize(message));
                 break;
             case JSON:
             case WHISPER_JSON:
@@ -57,14 +46,7 @@ public class TextSerializer_v898 extends TextSerializer_v685 {
                 helper.writeString(buffer, "textObjectAnnouncement");
                 helper.writeString(buffer, "textObject");
                 buffer.writeByte(type.ordinal());
-                text = converter.serializeJson(message);
-                if (text.isEmpty()) {
-                    text = " ";
-                    if (log.isDebugEnabled()) {
-                        log.debug("TextPacket of " + type + " with empty message");
-                    }
-                }
-                helper.writeString(buffer, text);
+                helper.writeString(buffer, converter.serializeJson(message));
                 break;
             case CHAT:
             case WHISPER:
@@ -75,14 +57,7 @@ public class TextSerializer_v898 extends TextSerializer_v685 {
                 helper.writeString(buffer, "announcement");
                 buffer.writeByte(type.ordinal());
                 helper.writeString(buffer, packet.getSourceName());
-                text = converter.serialize(message);
-                if (text.isEmpty()) {
-                    text = " ";
-                    if (log.isDebugEnabled()) {
-                        log.debug("TextPacket of " + type + " with empty message");
-                    }
-                }
-                helper.writeString(buffer, text);
+                helper.writeString(buffer, converter.serialize(message));
                 break;
             case TRANSLATION:
             case POPUP:
@@ -92,13 +67,7 @@ public class TextSerializer_v898 extends TextSerializer_v685 {
                 helper.writeString(buffer, "popup");
                 helper.writeString(buffer, "jukeboxPopup");
                 buffer.writeByte(type.ordinal());
-                text = converter.serializeWithArguments(message, packet.getParameters());
-                if (text.isEmpty()) {
-                    text = " ";
-                    if (log.isDebugEnabled()) {
-                        log.debug("TextPacket of " + type + " with empty message");
-                    }
-                }
+                String text = converter.serializeWithArguments(message, packet.getParameters());
                 helper.writeString(buffer, text);
                 helper.writeArray(buffer, packet.getParameters(), helper::writeString);
                 break;

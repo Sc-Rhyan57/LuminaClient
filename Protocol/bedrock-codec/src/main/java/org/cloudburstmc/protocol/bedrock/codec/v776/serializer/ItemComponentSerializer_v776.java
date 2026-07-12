@@ -21,7 +21,7 @@ public class ItemComponentSerializer_v776 implements BedrockPacketSerializer<Ite
             packetHelper.writeString(buf, item.getIdentifier());
             buf.writeShortLE(item.getRuntimeId());
             buf.writeBoolean(item.isComponentBased());
-            VarInts.writeInt(buf, item.getVersion().ordinal());
+            VarInts.writeInt(buffer, item.getVersion().ordinal());
             if (item.getComponentData() != null) { // We should check for isComponentBased() instead, but for some reason there can be non-data driven items with component data
                 packetHelper.writeTag(buf, item.getComponentData());
             } else {
@@ -36,7 +36,7 @@ public class ItemComponentSerializer_v776 implements BedrockPacketSerializer<Ite
             String name = packetHelper.readString(buf);
             short itemId = buf.readShortLE();
             boolean componentBased = buf.readBoolean();
-            int version = VarInts.readInt(buf);
+            int version = VarInts.readInt(buffer);
             NbtMap data = packetHelper.readTag(buf, NbtMap.class);
             return new SimpleItemDefinition(name, itemId, ItemVersion.from(version), componentBased, data);
         });

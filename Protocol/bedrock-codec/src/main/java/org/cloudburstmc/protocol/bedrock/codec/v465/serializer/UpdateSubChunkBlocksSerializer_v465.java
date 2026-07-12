@@ -17,14 +17,18 @@ public class UpdateSubChunkBlocksSerializer_v465 implements BedrockPacketSeriali
 
     @Override
     public void serialize(ByteBuf buffer, BedrockCodecHelper helper, UpdateSubChunkBlocksPacket packet) {
-        helper.writeBlockPosition(buffer, packet.getPosition());
+        VarInts.writeInt(buffer, packet.getChunkX());
+        VarInts.writeUnsignedInt(buffer, packet.getChunkY());
+        VarInts.writeInt(buffer, packet.getChunkZ());
         helper.writeArray(buffer, packet.getStandardBlocks(), this::writeBlockChangeEntry);
         helper.writeArray(buffer, packet.getExtraBlocks(), this::writeBlockChangeEntry);
     }
 
     @Override
     public void deserialize(ByteBuf buffer, BedrockCodecHelper helper, UpdateSubChunkBlocksPacket packet) {
-        packet.setPosition(helper.readBlockPosition(buffer));
+        packet.setChunkX(VarInts.readInt(buffer));
+        packet.setChunkY(VarInts.readUnsignedInt(buffer));
+        packet.setChunkZ(VarInts.readInt(buffer));
         helper.readArray(buffer, packet.getStandardBlocks(), this::readBlockChangeEntry);
         helper.readArray(buffer, packet.getExtraBlocks(), this::readBlockChangeEntry);
     }

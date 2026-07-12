@@ -7,6 +7,7 @@ import org.cloudburstmc.protocol.bedrock.data.biome.*;
 import org.cloudburstmc.protocol.common.util.Preconditions;
 import org.cloudburstmc.protocol.common.util.SequencedHashSet;
 import org.cloudburstmc.protocol.common.util.VarInts;
+import org.cloudburstmc.protocol.common.util.index.Indexed;
 import org.cloudburstmc.protocol.common.util.index.IndexedList;
 
 import java.awt.*;
@@ -18,7 +19,7 @@ public class BiomeDefinitionListSerializer_v844 extends BiomeDefinitionListSeria
 
     @Override
     protected void writeDefinition(ByteBuf buffer, BedrockCodecHelper helper, BiomeDefinitionData definition, SequencedHashSet<String> strings) {
-        this.writeDefinitionId(buffer, helper, definition);
+        this.writeDefinitionId(buffer, helper, definition, strings);
         buffer.writeFloatLE(definition.getTemperature());
         buffer.writeFloatLE(definition.getDownfall());
         buffer.writeFloatLE(definition.getFoliageSnow());
@@ -38,7 +39,7 @@ public class BiomeDefinitionListSerializer_v844 extends BiomeDefinitionListSeria
 
     @Override
     protected BiomeDefinitionData readDefinition(ByteBuf buffer, BedrockCodecHelper helper, List<String> strings) {
-        Integer id = this.readDefinitionId(buffer, helper);
+        Indexed<String> id = this.readDefinitionId(buffer, helper, strings);
         float temperature = buffer.readFloatLE();
         float downfall = buffer.readFloatLE();
         float foliageSnow = buffer.readFloatLE();
@@ -115,7 +116,7 @@ public class BiomeDefinitionListSerializer_v844 extends BiomeDefinitionListSeria
                 hasFrozenOceanSurface, hasTheEndSurface,
                 mesaSurface, cappedSurface,
                 overworldGenRules, multinoiseGenRules,
-                legacyWorldGenRules, null, null, null, null);
+                legacyWorldGenRules, null);
     }
 
     @Override

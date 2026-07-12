@@ -103,48 +103,34 @@ jobs:
           UPSTREAM_CODEC="/tmp/protocol-upstream/bedrock-codec/src/main/java/org/cloudburstmc/protocol/bedrock/codec"
           UPSTREAM_BASE="/tmp/protocol-upstream/bedrock-codec/src/main/java/org/cloudburstmc/protocol/bedrock"
           LOCAL_BASE="${WORKSPACE}/Protocol/bedrock-codec/src/main/java/org/cloudburstmc/protocol/bedrock"
-          
-          ADDED_COUNT=0
 
-          # Copia apenas as pastas v* que ainda não existem localmente
+          # ── Sincroniza todas as pastas v* (copia arquivos faltantes sem sobrescrever) ──
+          echo "🔄 Sincronizando pastas de codecs (v*)..."
           for dir in "${UPSTREAM_CODEC}"/v*; do
             if [ -d "$dir" ]; then
               CODEC_NAME=$(basename "$dir")
-              if [ ! -d "${LOCAL_CODEC_BASE}/${CODEC_NAME}" ]; then
-                cp -r "$dir" "${LOCAL_CODEC_BASE}/${CODEC_NAME}"
-                echo "  ✅ Codec adicionado: ${CODEC_NAME}"
-                ADDED_COUNT=$((ADDED_COUNT + 1))
-              else
-                echo "  ⏭️  Já existe, ignorado: ${CODEC_NAME}"
-              fi
+              mkdir -p "${LOCAL_CODEC_BASE}/${CODEC_NAME}"
+              # Usa rsync para preencher arquivos faltantes em pastas que já existem
+              rsync -a --ignore-existing "$dir/" "${LOCAL_CODEC_BASE}/${CODEC_NAME}/"
+              echo "  ✅ Codec sincronizado: ${CODEC_NAME}"
             fi
           done
 
           # ── Sincroniza a pasta data/ ──
           echo "🔄 Sincronizando pasta data/..."
           mkdir -p "${LOCAL_BASE}/data"
-          if [ -d "${UPSTREAM_BASE}/data" ]; then
-            rsync -a --ignore-existing "${UPSTREAM_BASE}/data/" "${LOCAL_BASE}/data/"
-            echo "✅ pasta data/ sincronizada."
-          else
-            echo "⚠️  pasta data/ não encontrada no upstream."
-          fi
+          rsync -a --ignore-existing "${UPSTREAM_BASE}/data/" "${LOCAL_BASE}/data/"
+          echo "✅ pasta data/ sincronizada."
 
           # ── Sincroniza a pasta packet/ ──
           echo "🔄 Sincronizando pasta packet/..."
           mkdir -p "${LOCAL_BASE}/packet"
-          if [ -d "${UPSTREAM_BASE}/packet" ]; then
-            rsync -a --ignore-existing "${UPSTREAM_BASE}/packet/" "${LOCAL_BASE}/packet/"
-            echo "✅ pasta packet/ sincronizada."
-          else
-            echo "⚠️  pasta packet/ não encontrada no upstream."
-          fi
+          rsync -a --ignore-existing "${UPSTREAM_BASE}/packet/" "${LOCAL_BASE}/packet/"
+          echo "✅ pasta packet/ sincronizada."
 
           # Agora limpa o temporário
           rm -rf /tmp/protocol-upstream
           cd "${WORKSPACE}"
-
-          echo "Total de codecs novos adicionados: ${ADDED_COUNT}"
 
           if [ -d "$CODEC_DIR" ]; then
             echo "codec_exists=true" >> $GITHUB_OUTPUT

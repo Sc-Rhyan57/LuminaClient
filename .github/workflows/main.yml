@@ -96,8 +96,8 @@ jobs:
           mkdir -p "${LOCAL_CODEC_BASE}"
           rm -rf /tmp/protocol-upstream
 
-          git clone --depth 1 --branch 3.0 --filter=blob:none --sparse \
-            "${UPSTREAM}" /tmp/protocol-upstream
+          # Clone normal (sem filter=blob:none para garantir que todos os subdiretórios venham)
+          git clone --depth 1 --branch 3.0 --sparse "${UPSTREAM}" /tmp/protocol-upstream
           cd /tmp/protocol-upstream
           git sparse-checkout set bedrock-codec
 
@@ -119,22 +119,27 @@ jobs:
           done
 
           # ── Sincroniza também a pasta data/ ──
-          # ATENÇÃO: Este bloco DEVE vir antes do "rm -rf /tmp/protocol-upstream"
           DATA_SRC="/tmp/protocol-upstream/bedrock-codec/src/main/java/org/cloudburstmc/protocol/bedrock/data"
           DATA_DST="${WORKSPACE}/Protocol/bedrock-codec/src/main/java/org/cloudburstmc/protocol/bedrock/data"
           
+          echo "🔄 Sincronizando pasta data/..."
+          mkdir -p "$DATA_DST"
+          
           if [ -d "$DATA_SRC" ]; then
-            echo "🔄 Sincronizando pasta data/..."
-            mkdir -p "$DATA_DST"
-            # Usa rsync para copiar recursivamente arquivos novos sem apagar os existentes
-            rsync -a --ignore-existing "$DATA_SRC/" "$DATA_DST/"
+            # Usa tar para copiar recursivamente, criando subpastas e mesclando sem sobrescrever
+            cd "$DATA_SRC"
+            tar cf - . | (cd "$DATA_DST" && tar xf - --keep-old-files)
+            
             DATA_COUNT=$(find "$DATA_DST" -name '*.java' | wc -l)
-            echo "✅ pasta data/ sincronizada (${DATA_COUNT} arquivos .java)."
+            echo "✅ pasta data/ sincronizada (${DATA_COUNT} arquivos .java no destino)."
+            echo "=== Subpastas em data/ ==="
+            ls -l "$DATA_DST"
           else
-            echo "⚠️  pasta data/ não encontrada no upstream."
+            echo "⚠️  pasta data/ não encontrada no upstream! Verificando o que foi baixado:"
+            ls -la /tmp/protocol-upstream/bedrock-codec/src/main/java/org/cloudburstmc/protocol/bedrock/
           fi
 
-          # Agora sim, podemos limpar o temporário
+          # Agora limpa o temporário
           rm -rf /tmp/protocol-upstream
           cd "${WORKSPACE}"
 

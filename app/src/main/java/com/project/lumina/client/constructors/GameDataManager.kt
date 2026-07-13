@@ -2,6 +2,7 @@ package com.project.lumina.client.constructors
 
 import android.util.Log
 import com.project.lumina.client.util.TextComponentUtil
+import org.cloudburstmc.protocol.bedrock.data.BuildPlatform
 import org.cloudburstmc.protocol.bedrock.packet.BedrockPacket
 import org.cloudburstmc.protocol.bedrock.packet.PlayerListPacket
 import org.cloudburstmc.protocol.bedrock.packet.StartGamePacket
@@ -21,7 +22,7 @@ class GameDataManager {
         val name: String,
         val xuid: String,
         val platformChatId: String,
-        val buildPlatform: Int,
+        val buildPlatform: BuildPlatform,
         val isTeacher: Boolean,
         val isHost: Boolean,
         val hasTrustedSkin: Boolean,
@@ -47,7 +48,19 @@ class GameDataManager {
                         isHost = entry.isHost,
                         hasTrustedSkin = entry.isTrustedSkin,
                         isSubClient = entry.isSubClient,
-                        color = entry.color
+                        color = try {
+                            val colorField = entry.javaClass.getDeclaredField("color")
+                            colorField.isAccessible = true
+                            val colorObj = colorField.get(entry)
+                            if (colorObj != null) {
+                                val getRGB = colorObj.javaClass.getMethod("getRGB")
+                                getRGB.invoke(colorObj) as Int
+                            } else {
+                                0
+                            }
+                        } catch (e: Exception) {
+                            0
+                        }
                     )
 
                     currentPlayerList[entry.uuid] = playerInfo
@@ -210,7 +223,7 @@ class GameDataManager {
 
     fun clearPacketData(packetType: String) {
         packetDataStore.remove(packetType)
-        Log.i("GameDataManager", "🧹 Cleared $packetType data")
+        Log.i("GameDataManager", "๐�งน Cleared $packetType data")
     }
 
   fun clearAllData() {

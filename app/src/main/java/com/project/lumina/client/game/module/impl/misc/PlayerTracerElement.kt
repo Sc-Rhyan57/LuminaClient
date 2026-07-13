@@ -6,6 +6,7 @@ import com.project.lumina.client.constructors.CheatCategory
 import com.project.lumina.client.util.AssetManager
 import net.kyori.adventure.text.Component
 import org.cloudburstmc.math.vector.Vector3f
+import org.cloudburstmc.protocol.bedrock.data.BuildPlatform
 import org.cloudburstmc.protocol.bedrock.data.skin.SerializedSkin
 import org.cloudburstmc.protocol.bedrock.packet.MoveEntityAbsolutePacket
 import org.cloudburstmc.protocol.bedrock.packet.PlayerAuthInputPacket
@@ -41,7 +42,7 @@ class PlayerTracerElement : Element(
         val name: String,
         val xuid: String,
         val platformChatId: String,
-        val buildPlatform: Int,
+        val buildPlatform: BuildPlatform,
         val skin: SerializedSkin
     )
 
@@ -93,9 +94,8 @@ class PlayerTracerElement : Element(
             previousPositions[playerInfo.entityId]?.roundUpCoordinates() ?: "N/A"
 
         val textPacket = TextPacket().apply {
-            type = TextPacket.Type.RAW
-           
-            message ="""
+            setType(TextPacket.Type.RAW)
+            setMessage("""
         §l§b[CutieAI]§r §ePlayer Gamertag: §a${playerInfo.name} §e| §eEntity ID: §c${playerInfo.entityId} §e| §ePosition: §a${entityPosition.roundUpCoordinates()} §e| §eDistance: §c${
                 ceil(
                     distance
@@ -106,9 +106,9 @@ class PlayerTracerElement : Element(
                     entityPosition.y - playerPosition.y
                 )
             } Blocks §e| §7Last Known Position: §f$lastKnownPosition
-    """.trimIndent()
-            xuid = ""
-            sourceName = ""
+    """.trimIndent())
+            setXuid("")
+            setSourceName("")
         }
 
         session.clientBound(textPacket) 

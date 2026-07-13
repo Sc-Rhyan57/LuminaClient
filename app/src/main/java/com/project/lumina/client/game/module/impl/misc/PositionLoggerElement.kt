@@ -119,11 +119,10 @@ class PositionLoggerElement : Element(
 
     private fun sendMessage(msg: String) {
         val textPacket = TextPacket().apply {
-            type = TextPacket.Type.RAW
-
-            message = msg
-            xuid = ""
-            sourceName = ""
+            setType(TextPacket.Type.RAW)
+            setMessage(msg)
+            setXuid("")
+            setSourceName("")
         }
         session.clientBound(textPacket)
     }

@@ -72,7 +72,7 @@ class CmdListener(private val moduleManager: GameManager) : Element(
             Log.d("CmdListener", "Outbound TextPacket: $message")
 
             if (message.startsWith(PREFIX)) {
-                interceptablePacket.isIntercepted = true
+                interceptablePacket.intercept()
                 processCommand(message)
                 TerminalViewModel.addTerminalLog("GameSession", "Command intercepted and not sent to server: $message")
             }
@@ -151,7 +151,7 @@ class CmdListener(private val moduleManager: GameManager) : Element(
                 
                 val message = packet.message.trim()
                 if (message.startsWith(PREFIX) && session.isProxyPlayer(packet.sourceName)) {
-                    interceptablePacket.isIntercepted = true
+                    interceptablePacket.intercept()
                     processCommand(message.toString())
                     TerminalViewModel.addTerminalLog("GameSession", "Command intercepted: $message")
                 }

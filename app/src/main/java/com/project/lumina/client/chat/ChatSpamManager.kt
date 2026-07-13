@@ -57,16 +57,30 @@ object ChatSpamManager {
             val session = GameManager.netBound
             if (session != null) {
                 if (message.startsWith("/")) {
-                    val commandPacket = CommandRequestPacket().apply {
-                        command = message.substring(1)
-                        commandOriginData = CommandOriginData(
+                    val commandPacket = CommandRequestPacket()
+                    try {
+                        val cmdField = commandPacket.javaClass.getDeclaredField("command")
+                        cmdField.isAccessible = true
+                        cmdField.set(commandPacket, message.substring(1))
+                        
+                        val originField = commandPacket.javaClass.getDeclaredField("commandOriginData")
+                        originField.isAccessible = true
+                        originField.set(commandPacket, CommandOriginData(
                             CommandOriginType.PLAYER,
                             UUID.randomUUID(),
                             "",
                             0L
-                        )
-                        internal = false
-                        version = session.protocolVersion
+                        ))
+                        
+                        val internalField = commandPacket.javaClass.getDeclaredField("internal")
+                        internalField.isAccessible = true
+                        internalField.setBoolean(commandPacket, false)
+                        
+                        val versionField = commandPacket.javaClass.getDeclaredField("version")
+                        versionField.isAccessible = true
+                        versionField.setInt(commandPacket, session.protocolVersion)
+                    } catch (e: Exception) {
+                        e.printStackTrace()
                     }
                     session.serverBound(commandPacket)
                     Log.d("ChatSpamManager", "Sent command: ${message}")

@@ -535,8 +535,17 @@ class NetBound(val luminaRelaySession: LuminaRelaySession) : ComposedPacketHandl
 
     fun showToast(title: CharSequence, content: CharSequence) {
         val toastPacket = ToastRequestPacket()
-        toastPacket.title = title
-        toastPacket.content = content
+        try {
+            val titleField = toastPacket.javaClass.getDeclaredField("title")
+            titleField.isAccessible = true
+            titleField.set(toastPacket, title.toString())
+            
+            val contentField = toastPacket.javaClass.getDeclaredField("content")
+            contentField.isAccessible = true
+            contentField.set(toastPacket, content.toString())
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
         clientBound(toastPacket)
     }
 }

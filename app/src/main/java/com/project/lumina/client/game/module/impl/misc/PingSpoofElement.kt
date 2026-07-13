@@ -38,7 +38,7 @@ class PingSpoofElement(iconResId: Int = AssetManager.getAsset("ic_timer_sand_bla
         val packet = interceptablePacket.packet
 
         when {
-            packet is NetworkStackLatencyPacket && packet.fromServer -> {
+            packet is NetworkStackLatencyPacket && packet.isFromServer -> {
                 handleLatencyPacket(interceptablePacket, packet)
             }
             packet is PlayerAuthInputPacket && packet.tick % tickInterval == 0L -> {
@@ -67,8 +67,7 @@ class PingSpoofElement(iconResId: Int = AssetManager.getAsset("ic_timer_sand_bla
             session?.serverBound(NetworkStackLatencyPacket().apply {
                 
                 timestamp = serverTimestamp * 1_000_000
-                
-                fromServer = true
+                setFromServer(true)
             })
             pendingResponses.remove(serverTimestamp)
         }

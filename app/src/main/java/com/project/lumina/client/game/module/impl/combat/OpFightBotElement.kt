@@ -95,7 +95,7 @@ class OpFightBotElement(iconResId: Int = AssetManager.getAsset("ic_eye")) : Elem
                 position = newPos
                 rotation = Vector3f.from(pitch, yaw, yaw)
                 mode = MovePlayerPacket.Mode.NORMAL
-                onGround = true
+                setOnGround(true)
                 tick = session.localPlayer.tickExists
             })
 
@@ -120,7 +120,7 @@ class OpFightBotElement(iconResId: Int = AssetManager.getAsset("ic_eye")) : Elem
                 position = newPos
                 rotation = session.localPlayer.vec3Rotation
                 mode = MovePlayerPacket.Mode.NORMAL
-                onGround = true
+                setOnGround(true)
                 tick = session.localPlayer.tickExists
             })
         }

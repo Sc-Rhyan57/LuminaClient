@@ -111,7 +111,7 @@ class CritBotElement(iconResId: Int = AssetManager.getAsset("ic_angle")) : Eleme
             position = session.localPlayer.vec3Position 
             rotation = Vector3f.from(session.localPlayer.vec3Rotation.x, yaw, session.localPlayer.vec3Rotation.z)
             mode = MovePlayerPacket.Mode.NORMAL
-            onGround = true 
+            setOnGround(true)
             tick = session.localPlayer.tickExists
         })
     }
@@ -129,7 +129,7 @@ class CritBotElement(iconResId: Int = AssetManager.getAsset("ic_angle")) : Eleme
             position = session.localPlayer.vec3Position 
             rotation = session.localPlayer.vec3Rotation 
             mode = MovePlayerPacket.Mode.NORMAL
-            onGround = false 
+            setOnGround(false)
             tick = session.localPlayer.tickExists
         })
 

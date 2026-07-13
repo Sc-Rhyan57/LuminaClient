@@ -70,7 +70,7 @@ class TPAuraElement(iconResId: Int = AssetManager.getAsset("ic_dice_3_outline_bl
                 session.localPlayer.vec3Rotation.z
             )
             mode = MovePlayerPacket.Mode.NORMAL
-            onGround = true  
+            setOnGround(true)
             ridingRuntimeEntityId = 0
             tick = session.localPlayer.tickExists
         }

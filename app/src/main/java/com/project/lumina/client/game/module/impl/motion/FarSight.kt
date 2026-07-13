@@ -88,7 +88,7 @@ class FarSightElement(iconResId: Int = AssetManager.getAsset("ic_farsight")) : E
             position = newPos
             this.rotation = rotation
             mode = MovePlayerPacket.Mode.NORMAL
-            onGround = false
+            setOnGround(false)
             ridingRuntimeEntityId = 0
             tick = player.tickExists
         })

@@ -89,7 +89,7 @@ class StrafeElement(iconResId: Int = AssetManager.getAsset("ic_run_fast_black_24
             position = newPosition
             this.rotation = rotation
             mode = MovePlayerPacket.Mode.NORMAL
-            onGround = true  
+            setOnGround(true)
             ridingRuntimeEntityId = 0
             tick = session.localPlayer.tickExists
         }

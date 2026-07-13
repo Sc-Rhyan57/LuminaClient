@@ -125,7 +125,7 @@ class EntityRadarElement(
                     position = newPos
                     rotation = Vector3f.from(pitch, yaw, yaw)
                     mode = MovePlayerPacket.Mode.NORMAL
-                    onGround = true
+                    setOnGround(true)
                     tick = session.localPlayer.tickExists
                 })
             }
@@ -347,7 +347,7 @@ class EntityRadarElement(
                     position = offsetPos
                     rotation = Vector3f.from(pitch, yaw, yaw)
                     mode = MovePlayerPacket.Mode.NORMAL
-                    onGround = false
+                    setOnGround(false)
                     tick = session.localPlayer.tickExists
                 })
             }
@@ -387,7 +387,7 @@ class EntityRadarElement(
                 position = offsetPos
                 rotation = Vector3f.from(pitch, yaw, yaw)
                 mode = MovePlayerPacket.Mode.NORMAL
-                onGround = false
+                setOnGround(false)
                 tick = session.localPlayer.tickExists
             })
         } catch (e: Exception) {
@@ -417,7 +417,7 @@ class EntityRadarElement(
                     position = originalPlayerPosition
                     rotation = originalPlayerRotation
                     mode = MovePlayerPacket.Mode.NORMAL
-                    onGround = true
+                    setOnGround(true)
                     tick = session.localPlayer.tickExists
                 })
             }

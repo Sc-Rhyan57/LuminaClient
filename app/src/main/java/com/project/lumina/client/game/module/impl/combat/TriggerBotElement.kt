@@ -195,7 +195,7 @@ class TriggerBotElement(iconResId: Int = AssetManager.getAsset("ic_bullseye_arro
             position = newPosition
             rotation = calculateRotation(predictedPos)
             mode = MovePlayerPacket.Mode.NORMAL
-            onGround = true
+            setOnGround(true)
             tick = session.localPlayer.tickExists
         })
     }
@@ -225,7 +225,7 @@ class TriggerBotElement(iconResId: Int = AssetManager.getAsset("ic_bullseye_arro
             position = newPosition
             rotation = calculateRotation(predictedPos)
             mode = MovePlayerPacket.Mode.NORMAL
-            isOnGround = true
+            setOnGround(true)
             tick = session.localPlayer.tickExists
         })
     }

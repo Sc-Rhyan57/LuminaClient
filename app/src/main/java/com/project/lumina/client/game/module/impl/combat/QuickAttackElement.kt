@@ -168,7 +168,7 @@ class QuickAttackElement(iconResId: Int = AssetManager.getAsset("ic_flash_black_
             position = strikePos
             rotation = session.localPlayer.vec3Rotation
             mode = MovePlayerPacket.Mode.TELEPORT
-            onGround = true
+            setOnGround(true)
             tick = session.localPlayer.tickExists
         })
 
@@ -193,7 +193,7 @@ class QuickAttackElement(iconResId: Int = AssetManager.getAsset("ic_flash_black_
                 position = pos
                 rotation = session.localPlayer.vec3Rotation
                 mode = MovePlayerPacket.Mode.TELEPORT
-                onGround = true
+                setOnGround(true)
                 tick = session.localPlayer.tickExists
             })
         }

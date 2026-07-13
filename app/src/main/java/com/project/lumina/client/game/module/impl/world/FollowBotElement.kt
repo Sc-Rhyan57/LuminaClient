@@ -68,7 +68,7 @@ class FollowBotElement : Element(
                 position = newPos
                 rotation = Vector3f.from(pitch, yaw, yaw)
                 mode = MovePlayerPacket.Mode.NORMAL
-                onGround = true
+                setOnGround(true)
                 tick = session.localPlayer.tickExists
             })
         }

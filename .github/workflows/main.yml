@@ -81,7 +81,7 @@ jobs:
           echo "Protocolo atual: '${CURRENT_PROTO}'"
 
       # ────────────────────────────────────────────────────────
-      # 3. SINCRONIZAR OS CODECS + PASTAS data/ E packet/
+      # 3. SINCRONIZAR TODO O CÓDIGO DO BEDROCK-CODEC
       # ────────────────────────────────────────────────────────
       - name: "🔄 Sincronizar Codecs (CloudburstMC branch 3.0)"
         id: update_protocol
@@ -100,33 +100,14 @@ jobs:
           cd /tmp/protocol-upstream
           git sparse-checkout set bedrock-codec
 
-          UPSTREAM_CODEC="/tmp/protocol-upstream/bedrock-codec/src/main/java/org/cloudburstmc/protocol/bedrock/codec"
-          UPSTREAM_BASE="/tmp/protocol-upstream/bedrock-codec/src/main/java/org/cloudburstmc/protocol/bedrock"
-          LOCAL_BASE="${WORKSPACE}/Protocol/bedrock-codec/src/main/java/org/cloudburstmc/protocol/bedrock"
+          UPSTREAM_JAVA="/tmp/protocol-upstream/bedrock-codec/src/main/java"
+          LOCAL_JAVA="${WORKSPACE}/Protocol/bedrock-codec/src/main/java"
 
-          # ── Sincroniza todas as pastas v* (copia arquivos faltantes sem sobrescrever) ──
-          echo "🔄 Sincronizando pastas de codecs (v*)..."
-          for dir in "${UPSTREAM_CODEC}"/v*; do
-            if [ -d "$dir" ]; then
-              CODEC_NAME=$(basename "$dir")
-              mkdir -p "${LOCAL_CODEC_BASE}/${CODEC_NAME}"
-              # Usa rsync para preencher arquivos faltantes em pastas que já existem
-              rsync -a --ignore-existing "$dir/" "${LOCAL_CODEC_BASE}/${CODEC_NAME}/"
-              echo "  ✅ Codec sincronizado: ${CODEC_NAME}"
-            fi
-          done
-
-          # ── Sincroniza a pasta data/ ──
-          echo "🔄 Sincronizando pasta data/..."
-          mkdir -p "${LOCAL_BASE}/data"
-          rsync -a --ignore-existing "${UPSTREAM_BASE}/data/" "${LOCAL_BASE}/data/"
-          echo "✅ pasta data/ sincronizada."
-
-          # ── Sincroniza a pasta packet/ ──
-          echo "🔄 Sincronizando pasta packet/..."
-          mkdir -p "${LOCAL_BASE}/packet"
-          rsync -a --ignore-existing "${UPSTREAM_BASE}/packet/" "${LOCAL_BASE}/packet/"
-          echo "✅ pasta packet/ sincronizada."
+          echo "🔄 Sincronizando todo o código do bedrock-codec (sobrescrevendo arquivos base)..."
+          # O rsync -a sem --ignore-existing sobrescreve os arquivos locais com as versões do upstream.
+          # Isso garante que classes base (EntityDataTypes, SoundEvent, BedrockPacketType) sejam atualizadas.
+          rsync -a "${UPSTREAM_JAVA}/" "${LOCAL_JAVA}/"
+          echo "✅ Código sincronizado com sucesso."
 
           # Agora limpa o temporário
           rm -rf /tmp/protocol-upstream

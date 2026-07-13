@@ -73,7 +73,7 @@ class LocalPlayer(val session: NetBound) : Player(0L, 0L, UUID.randomUUID(), "")
             }
 
             is MovePlayerPacket -> {
-                isOnGround = packet.onGround
+                isOnGround = packet.isOnGround
             }
 
             is ContainerOpenPacket -> {

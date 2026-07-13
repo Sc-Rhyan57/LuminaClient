@@ -111,7 +111,7 @@ class LockHeedElement(iconResId: Int = AssetManager.getAsset("ic_lockheed")) : E
             position = newPos
             rotation = player.vec3Rotation
             mode = MovePlayerPacket.Mode.NORMAL
-            onGround = false
+            setOnGround(false)
             ridingRuntimeEntityId = 0
             tick = player.tickExists
         })

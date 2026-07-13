@@ -316,25 +316,25 @@ private suspend fun sendMessageToServer(message: String) {
         if (session != null) {
             if (message.startsWith("/")) {
                 val commandPacket = CommandRequestPacket().apply {
-                    command = message.substring(1)
-                    commandOriginData = CommandOriginData(
+                    setCommand(message.substring(1))
+                    setCommandOriginData(CommandOriginData(
                         CommandOriginType.PLAYER,
                         UUID.randomUUID(),
                         "",
                         0L
-                    )
-                    internal = false
-                    version = session.protocolVersion
+                    ))
+                    setInternal(false)
+                    setVersion(session.protocolVersion)
                 }
                 session.serverBound(commandPacket)
             } else {
                 val textPacket = TextPacket().apply {
-                    type = TextPacket.Type.CHAT
-                    this.message = message
-                    sourceName = ""
-                    xuid = ""
-                    platformChatId = ""
-                    filteredMessage = ""
+                    setType(TextPacket.Type.CHAT)
+                    setMessage(message)
+                    setSourceName("")
+                    setXuid("")
+                    setPlatformChatId("")
+                    setFilteredMessage("")
                 }
                 session.serverBound(textPacket)
             }

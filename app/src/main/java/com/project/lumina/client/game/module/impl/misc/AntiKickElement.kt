@@ -171,7 +171,7 @@ class AntiKickElement : Element(
             session.displayClientMessage("§8[§bantikick§8] §cdisconnect prevented: §f$reason")
         }
         
-        interceptablePacket.isIntercepted = true
+        interceptablePacket.intercept()
         
         if (autoReconnect) {
             attemptReconnect()
@@ -183,7 +183,7 @@ class AntiKickElement : Element(
             session.displayClientMessage("§8[§bantikick§8] §etransfer prevented §7to §f${packet.address}:${packet.port}")
         }
         
-        interceptablePacket.isIntercepted = true
+        interceptablePacket.intercept()
     }
     
     private fun handlePlayStatusPacket(interceptablePacket: InterceptablePacket, packet: PlayStatusPacket) {
@@ -199,7 +199,7 @@ class AntiKickElement : Element(
                 session.displayClientMessage("§8[§bantikick§8] §cplay status kick prevented: §f$status")
             }
             
-            interceptablePacket.isIntercepted = true
+            interceptablePacket.intercept()
             
             if (autoReconnect) {
                 attemptReconnect()
